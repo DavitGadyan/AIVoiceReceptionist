@@ -1,5 +1,6 @@
 "use client";
 
+import { AnimatePresence, m } from "motion/react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -7,6 +8,7 @@ import { Aurora } from "@/components/ui/Aurora";
 import { Logo } from "@/components/ui/Logo";
 import { Button, Spinner } from "@/components/ui/primitives";
 import { api, setToken } from "@/lib/api";
+import { DUR, EASE_OUT, fadeRise } from "@/lib/motion";
 import type { Preset } from "@/lib/types";
 
 const darkInput =
@@ -43,7 +45,13 @@ export default function SignupPage() {
   return (
     <main data-theme="dark" className="relative isolate min-h-dvh bg-night px-4 py-10 text-white">
       <Aurora />
-      <div className="glass mx-auto w-full max-w-[760px] rounded-[var(--radius-frame)] border border-white/10 p-8 md:p-10">
+      <m.div
+        variants={fadeRise}
+        initial="initial"
+        animate="animate"
+        transition={{ duration: DUR.base, ease: EASE_OUT }}
+        className="glass mx-auto w-full max-w-[760px] rounded-[var(--radius-frame)] border border-white/10 p-8 md:p-10"
+      >
         <Link href="/" className="mb-10 inline-block">
           <Logo dark />
         </Link>
@@ -98,10 +106,16 @@ export default function SignupPage() {
               </select>
             </label>
           </div>
-          {error && <p role="alert" className="text-[14px] text-red-400">{error}</p>}
+          <AnimatePresence>
+            {error && (
+              <m.p key="error" role="alert" variants={fadeRise} initial="initial" animate="animate" exit="exit" transition={{ duration: DUR.fast, ease: EASE_OUT }} className="text-[14px] text-red-400">
+                {error}
+              </m.p>
+            )}
+          </AnimatePresence>
           <Button variant="primary" size="lg" disabled={busy}>{busy ? <Spinner /> : "Create receptionist"}</Button>
         </form>
-      </div>
+      </m.div>
     </main>
   );
 }

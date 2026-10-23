@@ -1,12 +1,15 @@
 "use client";
 
 import { ArrowRight, Mic, MicOff, PhoneCall, PhoneOff, Send, Sparkles } from "lucide-react";
+import { AnimatePresence, m } from "motion/react";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { useMe } from "@/components/app/Shell";
-import { Badge, Button, Card, Empty, Field, IconTile, PageHeader, Spinner, inputCls } from "@/components/ui/primitives";
+import { Badge, Button, Card, Empty, Field, IconTile, LiveDot, PageHeader, Spinner, TypingDots, inputCls } from "@/components/ui/primitives";
+import { Skeleton } from "@/components/ui/Skeleton";
 import { api } from "@/lib/api";
 import { OUTCOME_LABEL, outcomeTone } from "@/lib/format";
+import { DUR, EASE_OUT, fadeRise, slideFromLeft, slideFromRight } from "@/lib/motion";
 import type { Turn } from "@/lib/types";
 
 const SCENARIOS = [
@@ -129,7 +132,7 @@ function Simulator() {
           </Button>
         )}
         <div className="flex w-full items-center gap-2 text-[13px] text-muted">
-          <span className={`size-2 rounded-full ${live ? "bg-success" : "bg-line"}`} />
+          {live ? <LiveDot className="text-success" /> : <span className="size-2 rounded-full bg-line" />}
           {live ? "Call in progress" : ended ? "Call ended" : "Not connected"}
           {outcome && <Badge tone={outcomeTone(outcome)} className="ml-auto">{OUTCOME_LABEL[outcome] ?? outcome}</Badge>}
         </div>
@@ -144,42 +147,75 @@ function Simulator() {
           </li>
         ) : (
           turns.map((t, i) => (
-            <li
+            <m.li
               key={i}
+              variants={t.role === "assistant" ? slideFromLeft : slideFromRight}
+              initial="initial"
+              animate="animate"
+              transition={{ duration: DUR.base, ease: EASE_OUT }}
               className={`max-w-[80%] rounded-2xl px-4 py-2.5 text-[15px] leading-relaxed ${t.role === "assistant" ? "self-start rounded-bl-md bg-surface" : "self-end rounded-br-md bg-accent text-white"}`}
             >
               {t.text}
-            </li>
+            </m.li>
           ))
         )}
         {busy && turns.length > 0 && (
-          <li className="self-start rounded-2xl bg-surface px-4 py-3 text-muted" aria-label="Receptionist is typing"><Spinner /></li>
+          <m.li
+            variants={slideFromLeft}
+            initial="initial"
+            animate="animate"
+            transition={{ duration: DUR.fast, ease: EASE_OUT }}
+            className="self-start rounded-2xl rounded-bl-md bg-surface px-4 py-3 text-muted"
+            aria-label="Receptionist is typing"
+          >
+            <TypingDots />
+          </m.li>
         )}
       </ol>
 
-      {transfer && (
-        <div className="mx-4 mb-3 rounded-2xl bg-peri-soft p-3 text-[14px] sm:mx-5">
-          <b>Warm transfer</b> to {transfer.number}. Whisper: “{transfer.summary}”
-        </div>
-      )}
+      <AnimatePresence initial={false}>
+        {transfer && (
+          <m.div
+            key="transfer"
+            variants={fadeRise}
+            initial="initial"
+            animate="animate"
+            exit="exit"
+            transition={{ duration: DUR.base, ease: EASE_OUT }}
+            className="mx-4 mb-3 rounded-2xl bg-peri-soft p-3 text-[14px] sm:mx-5"
+          >
+            <b>Warm transfer</b> to {transfer.number}. Whisper: “{transfer.summary}”
+          </m.div>
+        )}
+      </AnimatePresence>
 
-      {ended && (
-        <div className="mx-4 mb-3 rounded-2xl border border-line p-4 sm:mx-5">
-          <div className="flex flex-wrap items-center gap-2">
-            <p className="font-semibold">Call summary</p>
-            <Badge tone={outcomeTone(ended.outcome)}>{OUTCOME_LABEL[ended.outcome] ?? ended.outcome}</Badge>
-            {endedId && (
-              <Link href={`/app/calls?id=${endedId}`} className="ml-auto inline-flex items-center gap-1 text-[14px] font-semibold text-accent hover:underline">
-                Open in Activity <ArrowRight className="size-4" />
-              </Link>
+      <AnimatePresence initial={false}>
+        {ended && (
+          <m.div
+            key="ended"
+            variants={fadeRise}
+            initial="initial"
+            animate="animate"
+            exit="exit"
+            transition={{ duration: DUR.base, ease: EASE_OUT }}
+            className="mx-4 mb-3 rounded-2xl border border-line p-4 sm:mx-5"
+          >
+            <div className="flex flex-wrap items-center gap-2">
+              <p className="font-semibold">Call summary</p>
+              <Badge tone={outcomeTone(ended.outcome)}>{OUTCOME_LABEL[ended.outcome] ?? ended.outcome}</Badge>
+              {endedId && (
+                <Link href={`/app/calls?id=${endedId}`} className="ml-auto inline-flex items-center gap-1 text-[14px] font-semibold text-accent hover:underline">
+                  Open in Activity <ArrowRight className="size-4" />
+                </Link>
+              )}
+            </div>
+            <p className="mt-2 text-[14px]">{ended.summary || "No summary."}</p>
+            {Object.keys(ended.extracted ?? {}).length > 0 && (
+              <pre className="mt-3 max-h-48 overflow-auto rounded-xl bg-surface p-3 text-[12px] leading-relaxed">{JSON.stringify(ended.extracted, null, 2)}</pre>
             )}
-          </div>
-          <p className="mt-2 text-[14px]">{ended.summary || "No summary."}</p>
-          {Object.keys(ended.extracted ?? {}).length > 0 && (
-            <pre className="mt-3 max-h-48 overflow-auto rounded-xl bg-surface p-3 text-[12px] leading-relaxed">{JSON.stringify(ended.extracted, null, 2)}</pre>
-          )}
-        </div>
-      )}
+          </m.div>
+        )}
+      </AnimatePresence>
 
       {error && <p role="alert" className="mx-4 mb-3 text-[14px] text-danger sm:mx-5">{error}</p>}
 
@@ -207,7 +243,7 @@ function Simulator() {
             <span className="sr-only">Say something as the caller</span>
             <input className={`${inputCls} h-12 rounded-full bg-surface px-5`} placeholder="Type what the caller says…" value={text} onChange={(e) => setText(e.target.value)} />
           </label>
-          <button type="submit" aria-label="Send" disabled={busy || !text.trim()} className="grid size-12 place-items-center rounded-full bg-accent text-white transition-opacity disabled:opacity-40">
+          <button type="submit" aria-label="Send" disabled={busy || !text.trim()} className="press grid size-12 place-items-center rounded-full bg-accent text-white disabled:opacity-40">
             <Send className="size-5" />
           </button>
         </form>
@@ -291,7 +327,11 @@ function BrowserVoice() {
       </div>
 
       {!cfg && !error ? (
-        <div className="grid place-items-center py-12"><Spinner /></div>
+        <div className="mt-5 space-y-3" aria-busy="true">
+          <Skeleton className="mx-auto my-8 size-40 rounded-full" />
+          <Skeleton className="h-1.5 w-full" />
+          <Skeleton className="h-11 w-full rounded-full" />
+        </div>
       ) : disabled ? (
         <div className="mt-5">
           <Empty title="Voice demo not configured">
@@ -311,7 +351,7 @@ function BrowserVoice() {
             </span>
           </div>
           <div role="meter" aria-label="Voice level" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(volume * 100)} className="mb-5 h-1.5 overflow-hidden rounded-full bg-surface">
-            <div className="h-full rounded-full bg-accent transition-[width] duration-100" style={{ width: `${Math.min(100, volume * 100)}%` }} />
+            <div className="h-full w-full origin-left rounded-full bg-accent" style={{ transform: `scaleX(${Math.min(1, volume)})`, transition: "transform 100ms linear" }} />
           </div>
           <div className="flex gap-2">
             {state === "idle" ? (

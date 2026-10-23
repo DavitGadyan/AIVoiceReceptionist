@@ -1,15 +1,19 @@
 "use client";
 
 import { CalendarCheck, CheckCircle2, Moon, Phone, Radio, Sparkles } from "lucide-react";
+import { AnimatePresence, m, useReducedMotion } from "motion/react";
 import Link from "next/link";
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import {
   Bar, BarChart, Cell, ComposedChart, Line, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis,
 } from "recharts";
 import { useMe } from "@/components/app/Shell";
-import { Avatar, Badge, Button, Card, Empty, IconTile, PageHeader, Segmented, Spinner } from "@/components/ui/primitives";
+import { AnimatedNumber } from "@/components/ui/AnimatedNumber";
+import { Avatar, Badge, Button, Card, Empty, IconTile, LiveDot, PageHeader, Segmented } from "@/components/ui/primitives";
+import { Skeleton, SkeletonRows } from "@/components/ui/Skeleton";
 import { API_URL, api, getToken } from "@/lib/api";
 import { ago, initials, OUTCOME_LABEL, outcomeTone, phone } from "@/lib/format";
+import { DUR, EASE_OUT, fadeRise, group, popIn, stagger } from "@/lib/motion";
 import { tokens } from "@/lib/tokens";
 import type { Analytics, CallItem, Task } from "@/lib/types";
 import { useApi } from "@/lib/useApi";
@@ -51,7 +55,19 @@ function Spark({ values, color }: { values: number[]; color: string }) {
   );
 }
 
-function Kpi({ icon, label, value, chart, chip }: { icon: ReactNode; label: string; value: string; chart: ReactNode; chip?: ReactNode }) {
+const pct = (n: number) => `${Math.round(n)}%`;
+
+/** True on the first render that has data, false on every render after — rows stagger in once. */
+function useFirstLoad(ready: boolean) {
+  const first = useRef(true);
+  const animate = first.current && ready;
+  useEffect(() => {
+    if (ready) first.current = false;
+  }, [ready]);
+  return animate;
+}
+
+function Kpi({ icon, label, value, chart, chip }: { icon: ReactNode; label: string; value: ReactNode; chart: ReactNode; chip?: ReactNode }) {
   return (
     <Card className="p-6">
       <div className="flex items-start justify-between gap-3">
@@ -75,6 +91,9 @@ export default function DashboardPage() {
   const calls = useApi<{ total: number; items: CallItem[] }>("/calls?limit=6");
   const [live, setLive] = useState<string[]>([]);
   const [active, setActive] = useState<number | null>(null);
+  const reduced = !!useReducedMotion();
+  const animateTasks = useFirstLoad(!!tasks.data);
+  const animateCalls = useFirstLoad(!!calls.data);
 
   const { reload: reloadA } = analytics;
   const { reload: reloadT } = tasks;
@@ -137,13 +156,27 @@ export default function DashboardPage() {
       <PageHeader
         title="Dashboard"
         sub={
-          live.length ? (
-            <Badge tone="success" dot>
-              <Radio className="size-3.5" /> {live.length} live call{live.length > 1 ? "s" : ""}
-            </Badge>
-          ) : me ? (
-            me.tenant.name
-          ) : undefined
+          <span className="inline-flex items-center">
+            <AnimatePresence initial={false}>
+              {live.length > 0 && (
+                <m.span
+                  key="live"
+                  variants={popIn}
+                  initial="initial"
+                  animate="animate"
+                  exit="exit"
+                  transition={{ duration: DUR.base, ease: EASE_OUT }}
+                  className="inline-flex"
+                >
+                  <Badge tone="success">
+                    <LiveDot />
+                    <Radio className="size-3.5" /> {live.length} live call{live.length > 1 ? "s" : ""}
+                  </Badge>
+                </m.span>
+              )}
+            </AnimatePresence>
+            {!live.length && me ? me.tenant.name : null}
+          </span>
         }
         actions={
           <>
@@ -165,25 +198,25 @@ export default function DashboardPage() {
       {analytics.error && <p role="alert" className="mb-4 text-[14px] text-danger">{analytics.error}</p>}
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <Kpi icon={<Phone className="size-6" />} label="Total calls" value={a ? a.total_calls.toLocaleString() : "—"} chart={<MiniBars values={daily} />} />
+        <Kpi icon={<Phone className="size-6" />} label="Total calls" value={<AnimatedNumber value={a?.total_calls} />} chart={<MiniBars values={daily} />} />
         <Kpi
           icon={<CalendarCheck className="size-6" />}
           label="Booked"
-          value={a ? a.booked.toLocaleString() : "—"}
+          value={<AnimatedNumber value={a?.booked} />}
           chart={<MiniBars values={daily.map((v) => Math.round(v * 0.4))} />}
           chip={a ? <Badge tone="success">{Math.round(a.conversion_rate * 100)}% conv.</Badge> : null}
         />
         <Kpi
           icon={<Moon className="size-6" />}
           label="After-hours handled"
-          value={a ? a.after_hours.toLocaleString() : "—"}
+          value={<AnimatedNumber value={a?.after_hours} />}
           chart={<Spark values={daily} color={C.accent2} />}
           chip={a && a.total_calls ? <Badge tone="warn">{Math.round((a.after_hours / a.total_calls) * 100)}%</Badge> : null}
         />
         <Kpi
           icon={<Sparkles className="size-6" />}
           label="Resolved by AI"
-          value={a ? `${Math.round(a.autonomous_rate * 100)}%` : "—"}
+          value={<AnimatedNumber value={a ? a.autonomous_rate * 100 : undefined} format={pct} />}
           chart={<Spark values={daily.slice().reverse()} color={C.success} />}
           chip={a ? <Badge tone="accent">{a.open_tasks} open</Badge> : null}
         />
@@ -194,13 +227,16 @@ export default function DashboardPage() {
           <div className="flex items-start justify-between gap-3">
             <div>
               <p className="text-[14px] text-muted">Calls handled</p>
-              <p className="font-[family-name:var(--font-display)] text-[30px] font-semibold tracking-tight">{a ? a.total_calls.toLocaleString() : "—"}</p>
+              <p className="font-[family-name:var(--font-display)] text-[30px] font-semibold tracking-tight"><AnimatedNumber value={a?.total_calls} /></p>
             </div>
             {a && <Badge tone="success">{a.minutes} min</Badge>}
           </div>
           <div className="mt-4 h-[300px]">
             {analytics.loading && !a ? (
-              <div className="grid h-full place-items-center text-muted"><Spinner /></div>
+              <div className="flex h-full flex-col justify-end gap-3 pb-6">
+                <Skeleton className="h-3 w-1/4" />
+                <Skeleton className="h-[72%] w-full rounded-2xl" />
+              </div>
             ) : series.length === 0 ? (
               <Empty title="No calls yet">Calls will chart here once your number is live.</Empty>
             ) : (
@@ -209,12 +245,12 @@ export default function DashboardPage() {
                   <XAxis dataKey="label" tickLine={false} axisLine={false} tick={{ fill: C.muted, fontSize: 12 }} />
                   <YAxis tickLine={false} axisLine={false} tick={{ fill: C.muted, fontSize: 12 }} width={32} allowDecimals={false} />
                   <Tooltip cursor={false} contentStyle={{ borderRadius: 12, border: `1px solid ${C.line}` }} />
-                  <Bar dataKey="calls" radius={[10, 10, 10, 10]} barSize={28}>
+                  <Bar dataKey="calls" radius={[10, 10, 10, 10]} barSize={28} animationDuration={600} animationEasing="ease-out" isAnimationActive={!reduced}>
                     {series.map((d, i) => (
                       <Cell key={d.date} fill={i === (active ?? series.length - 1) ? C.accent : `${C.accent}22`} />
                     ))}
                   </Bar>
-                  <Line type="monotone" dataKey="calls" stroke={C.accent} strokeWidth={2.5} dot={false} />
+                  <Line type="monotone" dataKey="calls" stroke={C.accent} strokeWidth={2.5} dot={false} animationDuration={600} animationEasing="ease-out" isAnimationActive={!reduced} />
                 </ComposedChart>
               </ResponsiveContainer>
             )}
@@ -227,7 +263,7 @@ export default function DashboardPage() {
             {outcomes.length ? (
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
-                  <Pie data={outcomes} dataKey="value" nameKey="name" innerRadius={58} outerRadius={88} paddingAngle={3} stroke="none">
+                  <Pie data={outcomes} dataKey="value" nameKey="name" innerRadius={58} outerRadius={88} paddingAngle={3} stroke="none" animationDuration={600} animationEasing="ease-out" isAnimationActive={!reduced}>
                     {outcomes.map((o, i) => <Cell key={o.name} fill={pieColors[i % pieColors.length]} />)}
                   </Pie>
                   <Tooltip contentStyle={{ borderRadius: 12, border: `1px solid ${C.line}` }} />
@@ -258,13 +294,19 @@ export default function DashboardPage() {
             <Badge tone={tasks.data?.length ? "warn" : "success"}>{tasks.data?.length ?? 0}</Badge>
           </div>
           {tasks.loading && !tasks.data ? (
-            <div className="grid place-items-center py-10 text-muted"><Spinner /></div>
+            <SkeletonRows n={3} avatar={false} />
           ) : !tasks.data?.length ? (
             <Empty title="All clear">Nothing needs a human right now.</Empty>
           ) : (
-            <ul className="max-h-[420px] space-y-3 overflow-y-auto pr-1">
+            <m.ul
+              variants={group}
+              initial={animateTasks ? "initial" : false}
+              animate="animate"
+              transition={stagger(30)}
+              className="max-h-[420px] space-y-3 overflow-y-auto pr-1"
+            >
               {tasks.data.slice(0, 8).map((t) => (
-                <li key={t.id} className="rounded-2xl border border-line p-4">
+                <m.li key={t.id} variants={fadeRise} className="rounded-2xl border border-line p-4">
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0">
                       <Badge tone={t.priority === "urgent" ? "danger" : t.priority === "high" ? "warn" : "neutral"}>{t.kind.replace(/_/g, " ").toLowerCase()}</Badge>
@@ -281,9 +323,9 @@ export default function DashboardPage() {
                       </button>
                     </div>
                   </div>
-                </li>
+                </m.li>
               ))}
-            </ul>
+            </m.ul>
           )}
         </Card>
 
@@ -293,15 +335,21 @@ export default function DashboardPage() {
             <Link href="/app/calls" className="text-[15px] font-semibold text-accent hover:underline">See all</Link>
           </div>
           {calls.loading && !calls.data ? (
-            <div className="grid place-items-center py-10 text-muted"><Spinner /></div>
+            <SkeletonRows n={5} />
           ) : !calls.data?.items.length ? (
             <Empty title="No calls yet">Place a test call from the Test call page.</Empty>
           ) : (
-            <ul className="divide-y divide-line">
-              {calls.data.items.map((c) => {
+            <m.ul
+              variants={group}
+              initial={animateCalls ? "initial" : false}
+              animate="animate"
+              transition={stagger(30)}
+              className="divide-y divide-line"
+            >
+              {calls.data.items.slice(0, 12).map((c) => {
                 const name = c.contact?.name || "Unknown caller";
                 return (
-                  <li key={c.id}>
+                  <m.li key={c.id} variants={fadeRise}>
                     <Link href={`/app/calls?id=${c.id}`} className="grid grid-cols-[auto_1fr_auto] items-center gap-4 rounded-xl py-3.5 transition-colors hover:bg-surface sm:grid-cols-[auto_1.3fr_1fr_1fr_auto] sm:px-2">
                       <Avatar text={initials(c.contact?.name || "", "?")} />
                       <div className="min-w-0">
@@ -309,16 +357,22 @@ export default function DashboardPage() {
                         <p className="truncate text-[13px] text-muted">{phone(c.from)}</p>
                       </div>
                       <p className="hidden truncate text-[14px] font-medium sm:block">{(c.intent || "—").replace(/_/g, " ").toLowerCase()}</p>
-                      <p className="hidden text-[14px] text-muted sm:block">{live.includes(c.id) ? "Live now" : ago(c.started_at)}</p>
+                      <p className="hidden text-[14px] text-muted sm:block">
+                        {live.includes(c.id) ? (
+                          <span className="inline-flex items-center gap-2 font-semibold text-success"><LiveDot /> Live now</span>
+                        ) : (
+                          ago(c.started_at)
+                        )}
+                      </p>
                       <span className="inline-flex h-10 items-center gap-2 rounded-full border border-line px-4 text-[13px] font-semibold">
                         <span className={`size-2 rounded-full ${{ success: "bg-success", warn: "bg-warn", danger: "bg-danger", accent: "bg-accent", neutral: "bg-muted" }[outcomeTone(c.outcome)]}`} />
                         {OUTCOME_LABEL[c.outcome] ?? (c.status === "live" ? "Live" : c.outcome || "—")}
                       </span>
                     </Link>
-                  </li>
+                  </m.li>
                 );
               })}
-            </ul>
+            </m.ul>
           )}
         </Card>
       </div>

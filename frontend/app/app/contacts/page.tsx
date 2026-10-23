@@ -1,13 +1,17 @@
 "use client";
 
 import { Ban, Filter, LayoutGrid, List, MessageSquare, MoreVertical, Phone, Plus, Search, ShieldCheck, Upload, X } from "lucide-react";
+import { AnimatePresence, m } from "motion/react";
 import { useSearchParams } from "next/navigation";
-import { Suspense, useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import {
   Avatar, Badge, Button, Card, Empty, Field, PageHeader, Segmented, Spinner, Tag, inputCls,
 } from "@/components/ui/primitives";
+import { SkeletonRows } from "@/components/ui/Skeleton";
+import { useToast } from "@/components/ui/Toast";
 import { api } from "@/lib/api";
 import { initials, phone as fmtPhone } from "@/lib/format";
+import { DUR, EASE_OUT, fadeRise, group, popIn, stagger } from "@/lib/motion";
 import type { Contact } from "@/lib/types";
 import { useApi } from "@/lib/useApi";
 
@@ -17,9 +21,19 @@ const PAGE = 12;
 
 const cap = (s: string) => (s ? s[0].toUpperCase() + s.slice(1) : s);
 
+/** True on the first render that has data, false on every render after — rows stagger in once. */
+function useFirstLoad(ready: boolean) {
+  const first = useRef(true);
+  const animate = first.current && ready;
+  useEffect(() => {
+    if (ready) first.current = false;
+  }, [ready]);
+  return animate;
+}
+
 export default function ContactsPage() {
   return (
-    <Suspense fallback={<div className="grid place-items-center py-24"><Spinner /></div>}>
+    <Suspense fallback={<div className="pt-24"><SkeletonRows n={6} /></div>}>
       <Contacts />
     </Suspense>
   );
@@ -57,6 +71,8 @@ function Contacts() {
   const contacts = data ?? [];
   const pages = Math.max(1, Math.ceil(contacts.length / PAGE));
   const shown = contacts.slice(page * PAGE, page * PAGE + PAGE);
+  const animateRows = useFirstLoad(!!data);
+  const toast = useToast();
 
   async function toggleBlock(c: Contact) {
     const updated = await api<Contact>(`/contacts/${c.id}`, { method: "PATCH", json: { blocked: !c.blocked } });
@@ -85,16 +101,21 @@ function Contacts() {
         }
       />
 
-      {creating && (
-        <CreateForm
-          onClose={() => setCreating(false)}
-          onCreated={(c) => {
-            setData((prev) => [c, ...(prev ?? [])]);
-            setPage(0);
-            setCreating(false);
-          }}
-        />
-      )}
+      <AnimatePresence initial={false}>
+        {creating && (
+          <m.div key="create" variants={fadeRise} initial="initial" animate="animate" exit="exit" transition={{ duration: DUR.base, ease: EASE_OUT }}>
+            <CreateForm
+              onClose={() => setCreating(false)}
+              onCreated={(c) => {
+                setData((prev) => [c, ...(prev ?? [])]);
+                setPage(0);
+                setCreating(false);
+                toast({ title: "Contact created", description: c.name || fmtPhone(c.phone), tone: "success" });
+              }}
+            />
+          </m.div>
+        )}
+      </AnimatePresence>
 
       <Card className="p-4 sm:p-6">
         <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
@@ -120,19 +141,19 @@ function Contacts() {
         </div>
 
         {loading && !data ? (
-          <div className="grid place-items-center py-20"><Spinner /></div>
+          <SkeletonRows n={6} />
         ) : error ? (
           <Empty title="Couldn't load contacts">{error}</Empty>
         ) : contacts.length === 0 ? (
           <Empty title="No contacts yet">{query || kind ? "Nothing matches that search." : "Contacts are created automatically from calls."}</Empty>
         ) : view === "list" ? (
-          <ul className="divide-y divide-line">
+          <m.ul key="list" variants={group} initial={animateRows ? "initial" : false} animate="animate" transition={stagger(30)} className="divide-y divide-line">
             {shown.map((c) => <ContactRow key={c.id} c={c} onBlock={() => toggleBlock(c)} />)}
-          </ul>
+          </m.ul>
         ) : (
-          <ul className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+          <m.ul key="grid" variants={group} initial={animateRows ? "initial" : false} animate="animate" transition={stagger(30)} className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
             {shown.map((c) => <ContactCard key={c.id} c={c} onBlock={() => toggleBlock(c)} />)}
-          </ul>
+          </m.ul>
         )}
 
         {contacts.length > PAGE && (
@@ -227,26 +248,37 @@ function Actions({ c, onBlock }: { c: Contact; onBlock: () => Promise<void> }) {
       <button aria-label="More" title="More" aria-expanded={open} onClick={() => setOpen((o) => !o)} className={tile}>
         <MoreVertical className="size-[18px]" />
       </button>
-      {open && (
-        <div role="menu" className="absolute right-0 top-12 z-10 w-48 rounded-2xl border border-line bg-ground p-1.5 shadow-lg">
-          <button
-            role="menuitem"
-            disabled={busy}
-            onClick={async () => {
-              setBusy(true);
-              try {
-                await onBlock();
-              } finally {
-                setBusy(false);
-                setOpen(false);
-              }
-            }}
-            className="flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-left text-[14px] hover:bg-surface"
+      <AnimatePresence>
+        {open && (
+          <m.div
+            key="menu"
+            role="menu"
+            variants={popIn}
+            initial="initial"
+            animate="animate"
+            exit="exit"
+            transition={{ duration: DUR.fast, ease: EASE_OUT }}
+            className="absolute right-0 top-12 z-10 w-48 origin-top-right rounded-2xl border border-line bg-ground p-1.5 shadow-lg"
           >
-            {c.blocked ? <ShieldCheck className="size-4" /> : <Ban className="size-4" />} {c.blocked ? "Unblock" : "Block number"}
-          </button>
-        </div>
-      )}
+            <button
+              role="menuitem"
+              disabled={busy}
+              onClick={async () => {
+                setBusy(true);
+                try {
+                  await onBlock();
+                } finally {
+                  setBusy(false);
+                  setOpen(false);
+                }
+              }}
+              className="flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-left text-[14px] hover:bg-surface"
+            >
+              {c.blocked ? <ShieldCheck className="size-4" /> : <Ban className="size-4" />} {c.blocked ? "Unblock" : "Block number"}
+            </button>
+          </m.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
@@ -264,7 +296,7 @@ function Tags({ c }: { c: Contact }) {
 /** Mobile: identity, then email + tags wrapping, then the action tiles. From md: the template's single-line columns. */
 function ContactRow({ c, onBlock }: { c: Contact; onBlock: () => Promise<void> }) {
   return (
-    <li className="flex flex-col gap-3 py-4 md:grid md:grid-cols-[minmax(220px,1.2fr)_minmax(160px,1fr)_minmax(180px,1.2fr)_70px_auto] md:items-center md:gap-4">
+    <m.li variants={fadeRise} className="flex flex-col gap-3 py-4 md:grid md:grid-cols-[minmax(220px,1.2fr)_minmax(160px,1fr)_minmax(180px,1.2fr)_70px_auto] md:items-center md:gap-4">
       <div className="flex min-w-0 items-center gap-3">
         <Avatar text={initials(c.name, "#")} size={44} />
         <div className="min-w-0">
@@ -278,13 +310,13 @@ function ContactRow({ c, onBlock }: { c: Contact; onBlock: () => Promise<void> }
         <p className="text-[13px] text-muted">{c.calls ?? 0} call{c.calls === 1 ? "" : "s"}</p>
       </div>
       <Actions c={c} onBlock={onBlock} />
-    </li>
+    </m.li>
   );
 }
 
 function ContactCard({ c, onBlock }: { c: Contact; onBlock: () => Promise<void> }) {
   return (
-    <li>
+    <m.li variants={fadeRise}>
       <Card className="flex h-full flex-col gap-4 p-5">
         <div className="flex items-center gap-3">
           <Avatar text={initials(c.name, "#")} size={48} />
@@ -300,6 +332,6 @@ function ContactCard({ c, onBlock }: { c: Contact; onBlock: () => Promise<void> 
           <Actions c={c} onBlock={onBlock} />
         </div>
       </Card>
-    </li>
+    </m.li>
   );
 }

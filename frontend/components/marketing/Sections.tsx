@@ -4,12 +4,14 @@ import {
   AlertTriangle, BellRing, Building2, CalendarCheck, Check, FileUp, Headphones, MessageSquareText, PhoneIncoming, Scale, Scissors,
   ShieldCheck, Sparkles, Stethoscope, Tent, Waypoints, Wrench,
 } from "lucide-react";
+import { m, useMotionTemplate, useMotionValue, useReducedMotion, useSpring } from "motion/react";
 import Image from "next/image";
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState, type PointerEvent as ReactPointerEvent, type ReactNode } from "react";
 import { Reveal } from "@/components/Reveal";
 import type { IndustryPhoto } from "@/components/marketing/industryPhotos";
 import { Logo } from "@/components/ui/Logo";
+import { SPRING } from "@/lib/motion";
 
 function Label({ children }: { children: React.ReactNode }) {
   return (
@@ -49,7 +51,7 @@ const STEPS = [
   { icon: MessageSquareText, label: "Follow up" },
 ];
 
-/** Template screen 2, bottom: overlapping circles, one lit with the gradient; hover moves the light. */
+/** Template screen 2, bottom: overlapping circles, one lit with the gradient; the light slides to the hovered circle. */
 export function Process() {
   const [active, setActive] = useState(3);
   return (
@@ -64,10 +66,13 @@ export function Process() {
               key={label}
               onMouseEnter={() => setActive(i)}
               onFocus={() => setActive(i)}
-              className={`relative -mr-5 mb-2 flex aspect-square w-[calc(33.33%+6px)] shrink-0 flex-col items-center justify-between rounded-full py-7 transition-[background,color] duration-[var(--dur-base)] md:w-[calc(16.66%+16px)] md:py-10 ${i === active ? "z-10 bg-[image:var(--grad-peri)] text-white" : "glass text-white/85"}`}
+              className={`relative -mr-5 mb-2 flex aspect-square w-[calc(33.33%+6px)] shrink-0 flex-col items-center justify-between rounded-full py-7 transition-colors duration-[var(--dur-base)] md:w-[calc(16.66%+16px)] md:py-10 ${i === active ? "z-10 text-white" : "glass text-white/85"}`}
             >
-              <Icon className="size-6" strokeWidth={1.6} />
-              <span className="text-[13px] font-semibold md:text-[16px]">{label}</span>
+              {i === active && (
+                <m.span layoutId="process-active" transition={SPRING} className="absolute inset-0 bg-[image:var(--grad-peri)]" style={{ borderRadius: 9999 }} aria-hidden />
+              )}
+              <Icon className="relative size-6" strokeWidth={1.6} />
+              <span className="relative text-[13px] font-semibold md:text-[16px]">{label}</span>
             </button>
           ))}
         </div>
@@ -99,7 +104,7 @@ function IndustryVisual({ x, photo }: { x: (typeof INDUSTRIES)[number]; photo: b
             fill
             sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
             onError={() => setHasPhoto(false)}
-            className="object-cover transition-transform duration-[var(--dur-slow)] group-hover:scale-[1.04]"
+            className="object-cover transition-transform duration-[var(--dur-base)] group-hover:scale-[1.04]"
           />
           <div className="absolute inset-0 bg-gradient-to-t from-night/70 via-night/10 to-transparent" />
         </>
@@ -131,7 +136,7 @@ export function Industries({ photos = [] }: { photos?: string[] }) {
         </div>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {INDUSTRIES.map((x, i) => (
-            <Reveal key={x.key} delay={i * 60} className="glass group overflow-hidden rounded-[var(--radius-card)] border border-white/10">
+            <Reveal key={x.key} delay={i * 60} className="glass glass-hover group overflow-hidden rounded-[var(--radius-card)] border border-white/10">
               <IndustryVisual x={x} photo={photos.includes(x.photo)} />
               <div className="p-6">
                 <h3 className="text-[19px] font-semibold tracking-tight">{x.title}</h3>
@@ -164,7 +169,7 @@ export function Features() {
         </h2>
         <div className="grid gap-x-10 gap-y-12 sm:grid-cols-2 lg:grid-cols-3">
           {FEATURES.map(({ icon: Icon, title, body }, i) => (
-            <Reveal key={title} delay={i * 50} className="glass rounded-[var(--radius-card)] border border-white/10 p-7">
+            <Reveal key={title} delay={i * 50} className="glass glass-hover rounded-[var(--radius-card)] border border-white/10 p-7">
               <span className="grid size-14 place-items-center rounded-2xl bg-accent/20 text-accent2">
                 <Icon className="size-6" strokeWidth={1.7} />
               </span>
@@ -192,29 +197,29 @@ export function Pricing() {
           Priced per line, not per seat
         </h2>
         <div className="grid gap-4 md:grid-cols-3">
-          {PLANS.map((p) => (
-            <div key={p.name} className={`glass flex flex-col rounded-[var(--radius-card)] border p-7 ${p.featured ? "border-accent/70" : "border-white/10"}`}>
+          {PLANS.map((p, i) => (
+            <Reveal key={p.name} delay={i * 60} className={`glass glass-hover flex flex-col rounded-[var(--radius-card)] border p-7 ${p.featured ? "border-accent/70" : "border-white/10"}`}>
               <h3 className="text-[22px] font-semibold">{p.name}</h3>
               <p className="mt-1 text-[14px] text-white/60">For one business, one phone line</p>
               <p className="mt-6 text-[40px] font-semibold tracking-tight">{p.price}</p>
               <p className="text-[13px] text-white/60">{p.note}</p>
-              <Link href="/signup" className={`mt-6 inline-flex h-12 items-center justify-center rounded-full text-[14px] font-semibold ${p.featured ? "btn-primary text-white" : "glass hover:bg-white/10"}`}>
+              <Link href="/signup" className={`press mt-6 inline-flex h-12 items-center justify-center rounded-full text-[14px] font-semibold ${p.featured ? "btn-primary text-white" : "glass hover:bg-white/10"}`}>
                 Start free trial
               </Link>
               <List items={p.items} />
-            </div>
+            </Reveal>
           ))}
-          <div className="glass flex flex-col rounded-[var(--radius-card)] border border-white/10 p-7">
+          <Reveal delay={PLANS.length * 60} className="glass glass-hover flex flex-col rounded-[var(--radius-card)] border border-white/10 p-7">
             <h3 className="text-[22px] font-semibold">Agency</h3>
             <p className="mt-1 text-[14px] text-white/60">White-label it for your own clients — your brand, your pricing</p>
             <p className="mt-6 text-[40px] font-semibold tracking-tight text-peri">Let&apos;s talk</p>
             <p className="text-[13px] text-white/60">Per client / month, billed annually</p>
-            <a href="mailto:sales@receptra.ai" className="glass mt-6 inline-flex h-12 items-center justify-center rounded-full text-[14px] font-semibold hover:bg-white/10">
+            <a href="mailto:sales@receptra.ai" className="glass press mt-6 inline-flex h-12 items-center justify-center rounded-full text-[14px] font-semibold hover:bg-white/10">
               Contact sales
             </a>
             <p className="mt-6 text-[14px] font-semibold">Everything in Pro, plus:</p>
             <List items={["Unlimited client workspaces", "Retell or self-hosted voice", "Custom integrations", "Priority support"]} />
-          </div>
+          </Reveal>
         </div>
       </div>
     </section>
@@ -237,18 +242,60 @@ function List({ items }: { items: string[] }) {
 export function Cta() {
   return (
     <section className="px-5 py-24 text-center text-white md:px-10 md:py-32">
-      <h2 className="mx-auto max-w-[16ch] font-medium tracking-[-0.035em]" style={{ fontSize: "var(--size-h1)" }}>
-        Stop sending callers to <em className="bg-[image:var(--grad-chrome)] bg-clip-text text-transparent">voicemail</em>
-      </h2>
-      <div className="mt-10 flex flex-wrap justify-center gap-3">
-        <Link href="/signup" className="btn-primary inline-flex h-13 items-center rounded-full px-7 text-[15px] font-semibold text-white hover:-translate-y-px">
-          Set up your receptionist
-        </Link>
-        <Link href="/login" className="glass inline-flex h-13 items-center rounded-full border border-white/15 px-7 text-[15px] font-semibold hover:bg-white/10">
+      <Reveal>
+        <h2 className="mx-auto max-w-[16ch] font-medium tracking-[-0.035em]" style={{ fontSize: "var(--size-h1)" }}>
+          Stop sending callers to <em className="bg-[image:var(--grad-chrome)] bg-clip-text text-transparent">voicemail</em>
+        </h2>
+      </Reveal>
+      <Reveal delay={80} className="mt-10 flex flex-wrap justify-center gap-3">
+        <Magnetic>
+          <Link href="/signup" className="btn-primary press inline-flex h-13 items-center rounded-full px-7 text-[15px] font-semibold text-white">
+            Set up your receptionist
+          </Link>
+        </Magnetic>
+        <Link href="/login" className="glass press inline-flex h-13 items-center rounded-full border border-white/15 px-7 text-[15px] font-semibold hover:bg-white/10">
           Explore the demo
         </Link>
-      </div>
+      </Reveal>
     </section>
+  );
+}
+
+/**
+ * The primary CTA leans a few pixels toward the pointer and springs back. Off for
+ * reduced motion and coarse pointers (touch fires no hover worth following).
+ */
+function Magnetic({ children }: { children: ReactNode }) {
+  const reduced = useReducedMotion();
+  const [coarse, setCoarse] = useState(false);
+  useEffect(() => setCoarse(window.matchMedia("(pointer: coarse)").matches), []);
+  const x = useMotionValue(0);
+  const y = useMotionValue(0);
+  const sx = useSpring(x, { duration: 0.5, bounce: 0.2 });
+  const sy = useSpring(y, { duration: 0.5, bounce: 0.2 });
+  const transform = useMotionTemplate`translate(${sx}px, ${sy}px)`;
+  const enabled = !reduced && !coarse;
+
+  const onMove = (e: ReactPointerEvent<HTMLSpanElement>) => {
+    if (!enabled) return;
+    const r = e.currentTarget.getBoundingClientRect();
+    const dx = e.clientX - (r.left + r.width / 2);
+    const dy = e.clientY - (r.top + r.height / 2);
+    const d = Math.hypot(dx, dy);
+    const reach = Math.min(1, d / 80);
+    const k = d === 0 ? 0 : (6 * reach) / d;
+    x.set(dx * k);
+    y.set(dy * k);
+  };
+  const reset = () => {
+    x.set(0);
+    y.set(0);
+  };
+
+  return (
+    <m.span className="inline-flex" style={{ transform }} onPointerMove={onMove} onPointerLeave={reset}>
+      {children}
+    </m.span>
   );
 }
 

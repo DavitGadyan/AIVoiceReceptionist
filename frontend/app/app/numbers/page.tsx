@@ -1,10 +1,14 @@
 "use client";
 
 import { Grid2x2, Info, List, Plus, Trash2, X } from "lucide-react";
+import { AnimatePresence, m } from "motion/react";
 import { useState } from "react";
 import { Badge, Button, Card, Empty, Field, PageHeader, Segmented, Spinner, inputCls } from "@/components/ui/primitives";
+import { SkeletonCard } from "@/components/ui/Skeleton";
+import { useToast } from "@/components/ui/Toast";
 import { api } from "@/lib/api";
 import { phone } from "@/lib/format";
+import { DUR, EASE_OUT, fadeRise, group, stagger } from "@/lib/motion";
 import type { PhoneNumber } from "@/lib/types";
 import { useApi } from "@/lib/useApi";
 
@@ -29,16 +33,28 @@ export default function NumbersPage() {
         }
       />
 
-      {adding && <AddForm onDone={async () => { setAdding(false); await reload(); }} />}
+      <AnimatePresence initial={false}>
+        {adding && (
+          <m.div key="add" variants={fadeRise} initial="initial" animate="animate" exit="exit" transition={{ duration: DUR.base, ease: EASE_OUT }}>
+            <AddForm onDone={async () => { setAdding(false); await reload(); }} />
+          </m.div>
+        )}
+      </AnimatePresence>
 
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_340px]">
         <div className="min-w-0">
-          {loading && !data && <Spinner />}
+          {loading && !data && (
+            <div className="grid gap-4 sm:grid-cols-2" aria-busy="true">
+              <SkeletonCard lines={3} className="min-h-[180px]" />
+              <SkeletonCard lines={3} className="min-h-[180px]" />
+            </div>
+          )}
           {error && <Card className="p-4 text-danger">{error}</Card>}
           {data?.length === 0 && <Empty title="No numbers yet">Add the number callers will ring — a new dedicated number, or your existing one forwarded when you can't answer.</Empty>}
-          <div className={view === "grid" ? "grid gap-4 sm:grid-cols-2" : "space-y-3"}>
-            {data?.map((n) => (
-              <Card key={n.id} className={`p-5 ${view === "list" ? "flex flex-wrap items-center gap-4" : ""}`}>
+          <m.div variants={group} initial="initial" animate="animate" transition={stagger(40)} className={view === "grid" ? "grid gap-4 sm:grid-cols-2" : "space-y-3"}>
+            {data?.slice(0, 12).map((n) => (
+              <m.div key={n.id} variants={fadeRise}>
+              <Card className={`p-5 ${view === "list" ? "flex flex-wrap items-center gap-4" : ""}`}>
                 <div className={`flex items-start gap-3 ${view === "list" ? "min-w-0 flex-1" : ""}`}>
                   <span className="grid size-11 shrink-0 place-items-center rounded-full bg-peri-soft text-[13px] font-bold text-accent">{n.country}</span>
                   <div className="min-w-0 flex-1">
@@ -62,8 +78,9 @@ export default function NumbersPage() {
                   {view === "list" && <DeleteBtn n={n} onDone={reload} />}
                 </div>
               </Card>
+              </m.div>
             ))}
-          </div>
+          </m.div>
         </div>
         <ForwardingHelp />
       </div>
@@ -91,7 +108,7 @@ function AddForm({ onDone }: { onDone: () => Promise<void> }) {
   const [f, setF] = useState(BLANK);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
-  const [note, setNote] = useState<string | null>(null);
+  const toast = useToast();
   const set = (k: keyof typeof BLANK) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => setF({ ...f, [k]: e.target.value });
 
   async function submit(e: React.FormEvent) {
@@ -100,7 +117,11 @@ function AddForm({ onDone }: { onDone: () => Promise<void> }) {
     setErr(null);
     try {
       const r = await api<{ attach: { attached: boolean; reason?: string } }>("/numbers", { method: "POST", json: { ...f, e164: f.e164.replace(/[\s()-]/g, "") } });
-      if (f.provider_ref && !r.attach.attached) setNote(`Saved, but not linked to the provider: ${r.attach.reason ?? "check the provider ID"}`);
+      if (f.provider_ref && !r.attach.attached) {
+        toast({ title: "Saved, but not linked to the provider", description: r.attach.reason ?? "Check the provider ID", tone: "warn", duration: 6000 });
+      } else {
+        toast({ title: "Number added", description: phone(f.e164), tone: "success" });
+      }
       await onDone();
     } catch (e2) {
       setErr(e2 instanceof Error ? e2.message : "Failed");
@@ -130,7 +151,6 @@ function AddForm({ onDone }: { onDone: () => Promise<void> }) {
           </select>
         </Field>
         {err && <p role="alert" className="text-[14px] text-danger sm:col-span-2 lg:col-span-3">{err}</p>}
-        {note && <p role="status" className="text-[14px] text-warn sm:col-span-2 lg:col-span-3">{note}</p>}
         <div className="sm:col-span-2 lg:col-span-3"><Button variant="primary" disabled={busy}>{busy ? <Spinner /> : "Save number"}</Button></div>
       </form>
     </Card>

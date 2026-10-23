@@ -1,5 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Manrope as BodyFont, Sora as DisplayFont } from "next/font/google";
+import { MotionProvider } from "@/components/MotionProvider";
+import { ToastProvider } from "@/components/ui/Toast";
 import "./globals.css";
 
 const displayFont = DisplayFont({ subsets: ["latin"], variable: "--font-display-loaded", display: "swap" });
@@ -23,7 +25,11 @@ export const viewport: Viewport = { themeColor: "#060606" };
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className={`${displayFont.variable} ${bodyFont.variable}`}>
-      <body>{children}</body>
+      <body>
+        <MotionProvider>
+          <ToastProvider>{children}</ToastProvider>
+        </MotionProvider>
+      </body>
     </html>
   );
 }

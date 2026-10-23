@@ -28,7 +28,7 @@ async function exists(url: string, type: string) {
  * GLB, then the procedural avatar — so the hero never depends on the generation step.
  * `level` (0..1) is the live voice amplitude.
  */
-export function HeadScene({ level = 0 }: { level?: number }) {
+export function HeadScene({ level = 0, onReady }: { level?: number; onReady?: () => void }) {
   const [mode, setMode] = useState<Mode | null>(null);
   const [reduced, setReduced] = useState(false);
 
@@ -62,9 +62,21 @@ export function HeadScene({ level = 0 }: { level?: number }) {
           </Rig>
         )}
         <ChromeEnvironment />
+        {mode !== null && <Mounted onReady={onReady} />}
       </Suspense>
     </Canvas>
   );
+}
+
+/** Fires once the Suspense boundary has resolved, i.e. the portrait/GLB textures are in. */
+function Mounted({ onReady }: { onReady?: () => void }) {
+  const fired = useRef(false);
+  useEffect(() => {
+    if (fired.current) return;
+    fired.current = true;
+    onReady?.();
+  }, [onReady]);
+  return null;
 }
 
 /** Turns the head toward the cursor with a damped follow; idle sway when the cursor is still. */

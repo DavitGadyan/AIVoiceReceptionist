@@ -1,8 +1,11 @@
 "use client";
 
 import { Plus, Trash2, X } from "lucide-react";
-import { useState, type ReactNode } from "react";
+import { m } from "motion/react";
+import { useEffect, useState, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import { Button, Card, inputCls } from "@/components/ui/primitives";
+import { DUR, EASE_OUT, popIn } from "@/lib/motion";
 
 /** Free-text chips: Enter or comma adds, Backspace on empty removes the last one. */
 export function ChipsInput({ value, onChange, placeholder, label }: { value: string[]; onChange: (v: string[]) => void; placeholder?: string; label: string }) {
@@ -99,16 +102,49 @@ export function Area({ value, onChange, label, rows = 3 }: { value: string; onCh
   return <textarea aria-label={label} rows={rows} className={`${inputCls} resize-y`} value={value} onChange={(e) => onChange(e.target.value)} />;
 }
 
+/**
+ * Centred dialog in a portal. Backdrop fades; the panel pops in from scale(0.96)
+ * and leaves at scale(0.98), faster. Wrap the caller's `{open && <Modal/>}` in
+ * `<AnimatePresence>` so the exit plays. Escape closes.
+ */
 export function Modal({ title, onClose, children }: { title: string; onClose: () => void; children: ReactNode }) {
-  return (
-    <div role="dialog" aria-modal="true" aria-label={title} className="fixed inset-0 z-50 grid place-items-center bg-black/50 p-4" onClick={onClose}>
-      <div className="max-h-[85dvh] w-full max-w-3xl overflow-hidden rounded-[var(--radius-card)] bg-ground text-ink shadow-2xl" onClick={(e) => e.stopPropagation()}>
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [onClose]);
+
+  if (typeof document === "undefined") return null;
+
+  return createPortal(
+    <div role="dialog" aria-modal="true" aria-label={title} className="fixed inset-0 z-50 grid place-items-center p-4">
+      <m.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1, transition: { duration: DUR.base, ease: EASE_OUT } }}
+        exit={{ opacity: 0, transition: { duration: DUR.fast, ease: EASE_OUT } }}
+        className="absolute inset-0 bg-black/50"
+        onClick={onClose}
+        aria-hidden
+      />
+      <m.div
+        variants={popIn}
+        initial="initial"
+        animate="animate"
+        exit="exit"
+        transition={{ duration: DUR.base, ease: EASE_OUT }}
+        style={{ transformOrigin: "center" }}
+        className="relative max-h-[85dvh] w-full max-w-3xl overflow-hidden rounded-[var(--radius-card)] bg-ground text-ink shadow-2xl"
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="flex items-center justify-between border-b border-line px-5 py-4">
           <h3 className="font-semibold">{title}</h3>
-          <button aria-label="Close" onClick={onClose} className="grid size-9 place-items-center rounded-xl hover:bg-surface"><X className="size-4" /></button>
+          <button aria-label="Close" onClick={onClose} className="press grid size-9 place-items-center rounded-xl hover:bg-surface"><X className="size-4" /></button>
         </div>
         <div className="max-h-[70dvh] overflow-auto p-5">{children}</div>
-      </div>
-    </div>
+      </m.div>
+    </div>,
+    document.body,
   );
 }

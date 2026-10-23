@@ -64,9 +64,17 @@
   --size-body: 16px;
   --leading-display: 1.02;
 
-  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  /*
+   * Motion tokens. Entrances/exits use --ease-out, on-screen movement uses
+   * --ease-in-out, drawers use --ease-drawer. UI motion stays under 300ms;
+   * --dur-slow is for marketing reveals only. Mirrored in lib/motion.ts.
+   */
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+  --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
+  --dur-press: 160ms;
   --dur-fast: 180ms;
-  --dur-base: 320ms;
+  --dur-base: 240ms;
   --dur-slow: 600ms;
 }
 
@@ -179,6 +187,69 @@ button { cursor: pointer; }
 .btn-primary:hover { filter: brightness(1.06); }
 
 /*
+ * Press feedback: scale(0.97) with asymmetric timing (press slower than
+ * release). Transform and colour only. Don't combine with Tailwind
+ * `transition-*` utilities on the same element — they override this shorthand.
+ */
+.press {
+  transition: transform 100ms var(--ease-out), background-color var(--dur-fast) ease, color var(--dur-fast) ease, opacity var(--dur-fast) ease;
+}
+.press:active {
+  transform: scale(0.97);
+  transition-duration: var(--dur-press), var(--dur-fast), var(--dur-fast), var(--dur-fast);
+}
+
+/*
+ * Hover lift for glass cards. The lift uses the `translate` property so it
+ * never fights a `transform` set by Reveal; the lip highlight is a
+ * pseudo-element so no box-shadow or filter is animated on the pane.
+ */
+.glass-hover {
+  transition: translate var(--dur-fast) var(--ease-out);
+}
+.glass-hover::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.55);
+  background: radial-gradient(60% 40% at 50% 0%, rgba(255, 255, 255, 0.18), transparent 70%);
+  transition: opacity var(--dur-fast) ease;
+}
+@media (hover: hover) and (pointer: fine) {
+  .glass-hover:hover { translate: 0 -2px; }
+  .glass-hover:hover::after { opacity: 1; }
+}
+
+/* Live-call pulse: an expanding ring behind a dot (transform + opacity only). */
+.live-dot { position: relative; }
+.live-dot::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: currentColor;
+  opacity: 0.6;
+  animation: live-ring 1.6s var(--ease-out) infinite;
+}
+@keyframes live-ring {
+  from { transform: scale(1); opacity: 0.6; }
+  to { transform: scale(1.8); opacity: 0; }
+}
+
+/* Typing indicator dots. */
+.typing-dot { animation: typing-dot 900ms ease-in-out infinite; }
+.typing-dot:nth-child(2) { animation-delay: 150ms; }
+.typing-dot:nth-child(3) { animation-delay: 300ms; }
+@keyframes typing-dot {
+  0%, 100% { opacity: 0.3; }
+  50% { opacity: 1; }
+}
+
+/*
  * Aurora: four drifting colour blobs behind every page. Two layers moving at
  * different speeds read as liquid; the SVG displacement filter (see Aurora.tsx)
  * ripples their edges.
@@ -243,17 +314,28 @@ button { cursor: pointer; }
 [data-reveal="shown"] {
   opacity: 1;
   transform: none;
+  will-change: auto;
+}
+/* A revealed card that also lifts on hover: both transitions, separate channels. */
+[data-reveal].glass-hover {
+  transition: opacity var(--dur-slow) var(--ease-out),
+              transform var(--dur-slow) var(--ease-out),
+              translate var(--dur-fast) var(--ease-out);
+  transition-delay: var(--reveal-delay, 0ms), var(--reveal-delay, 0ms), 0ms;
 }
 
 }
 
-/* Unlayered on purpose: reduced motion outranks everything. */
+/*
+ * Unlayered on purpose: reduced motion outranks everything. Fewer and gentler,
+ * not zero — opacity fades stay, movement goes. motion/react components are
+ * handled by MotionConfig reducedMotion="user".
+ */
 @media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
-    scroll-behavior: auto !important;
-  }
-  [data-reveal] { opacity: 1; transform: none; }
+  html { scroll-behavior: auto; }
+  .aurora::before, .aurora::after { animation-play-state: paused; }
+  [data-reveal] { opacity: 1; transform: none; transition: none; }
+  .press:active { transform: none; }
+  .glass-hover:hover { translate: none; }
+  .live-dot::after, .typing-dot { animation: none; }
 }

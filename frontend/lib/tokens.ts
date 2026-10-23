@@ -13,7 +13,8 @@ export const tokens = {
     success: "#16A34A",
   },
   chrome: { base: "#D9D4FF", magenta: "#E14BD8", cyan: "#47D7F0", violet: "#5B5BF0" },
-  motion: { ease: [0.22, 1, 0.36, 1] as const, fast: 180, base: 320, slow: 600 },
+  /** Same values as the CSS motion tokens and lib/motion.ts. */
+  motion: { ease: [0.23, 1, 0.32, 1] as const, press: 160, fast: 180, base: 240, slow: 600 },
 } as const;
 
 export type Tokens = typeof tokens;

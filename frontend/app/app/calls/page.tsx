@@ -4,22 +4,36 @@ import {
   AlertTriangle, ArrowLeft, Ban, CalendarCheck, CheckCircle2, Clock, Mail, MapPin, MessageSquare, MoreVertical, Pause,
   Phone, PhoneCall, PhoneIncoming, PhoneMissed, Play, Search, Send, ShieldAlert, Tag as TagIcon, UserRound,
 } from "lucide-react";
+import { AnimatePresence, m } from "motion/react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import {
-  Avatar, Badge, Button, Card, Empty, IconTile, Segmented, Spinner, Tag, inputCls,
+  Avatar, Badge, Button, Card, Empty, IconTile, LiveDot, Segmented, Spinner, Tag, inputCls,
 } from "@/components/ui/primitives";
+import { SkeletonCard, SkeletonRows } from "@/components/ui/Skeleton";
+import { useToast } from "@/components/ui/Toast";
 import { api } from "@/lib/api";
 import { OUTCOME_LABEL, ago, duration, initials, outcomeTone, phone as fmtPhone } from "@/lib/format";
+import { DUR, EASE_OUT, SPRING, fadeRise, group, popIn, stagger } from "@/lib/motion";
 import type { CallDetail, CallItem, Message, Task } from "@/lib/types";
 import { useApi } from "@/lib/useApi";
 
 type Filter = "all" | "attention";
 
+/** True on the first render that has data, false on every render after — rows stagger in once. */
+function useFirstLoad(ready: boolean) {
+  const first = useRef(true);
+  const animate = first.current && ready;
+  useEffect(() => {
+    if (ready) first.current = false;
+  }, [ready]);
+  return animate;
+}
+
 export default function CallsPage() {
   return (
-    <Suspense fallback={<div className="grid place-items-center py-24"><Spinner /></div>}>
+    <Suspense fallback={<div className="max-w-[280px] pt-16"><SkeletonRows n={6} /></div>}>
       <Activity />
     </Suspense>
   );
@@ -56,6 +70,7 @@ function Activity() {
 
   const list = useApi<{ total: number; items: CallItem[] }>(path);
   const items = list.data?.items ?? [];
+  const animateRows = useFirstLoad(!!list.data);
 
   // Keep the other params (the top bar's ?q=) when selecting a call.
   const hrefFor = (id: string) => {
@@ -112,26 +127,28 @@ function Activity() {
         </div>
 
         {list.loading && !list.data ? (
-          <div className="grid place-items-center py-16"><Spinner /></div>
+          <SkeletonRows n={7} />
         ) : list.error ? (
           <Empty title="Couldn't load calls">{list.error}</Empty>
         ) : items.length === 0 ? (
           <Empty title="No calls here">{filter === "attention" ? "Nothing needs your attention." : "Calls appear here as soon as your receptionist answers one."}</Empty>
         ) : (
-          <ul className="flex flex-col gap-1">
-            {items.map((c) => (
-              <li key={c.id}>
+          <m.ul variants={group} initial={animateRows ? "initial" : false} animate="animate" transition={stagger(30)} className="flex flex-col gap-1">
+            {items.map((c, i) => (
+              <m.li key={c.id} variants={i < 12 ? fadeRise : undefined}>
                 <CallRow call={c} active={c.id === selected} onClick={() => select(c.id)} />
-              </li>
+              </m.li>
             ))}
-          </ul>
+          </m.ul>
         )}
       </section>
 
-      {/* Columns 2 + 3 */}
+      {/* Columns 2 + 3 — keyed on the call so switching calls crossfades instead of snapping */}
       <div className={`min-w-0 flex-1 ${selected ? "" : "hidden lg:block"}`}>
         {selected ? (
-          <CallView id={selected} onChanged={list.reload} />
+          <m.div key={selected} variants={fadeRise} initial="initial" animate="animate" transition={{ duration: DUR.base, ease: EASE_OUT }}>
+            <CallView id={selected} onChanged={list.reload} />
+          </m.div>
         ) : (
           <Empty title="Pick a call">Select a call on the left to see its transcript, actions and caller.</Empty>
         )}
@@ -166,8 +183,8 @@ function CallRow({ call, active, onClick }: { call: CallItem; active: boolean; o
       <span className="flex shrink-0 flex-col items-end gap-1">
         {call.status === "live" ? (
           <>
-            <span className="inline-flex items-center gap-1 text-[12px] font-semibold text-success">
-              <PhoneCall className="size-3.5" /> Live call
+            <span className="inline-flex items-center gap-1.5 text-[12px] font-semibold text-success">
+              <LiveDot /> <PhoneCall className="size-3.5" /> Live call
             </span>
             <LiveTimer since={call.started_at} />
           </>
@@ -242,7 +259,14 @@ function CallView({ id, onChanged }: { id: string; onChanged: () => void }) {
 
   useEffect(() => setView("summary"), [id]);
 
-  if (loading && !data) return <div className="grid place-items-center py-24"><Spinner /></div>;
+  if (loading && !data) {
+    return (
+      <div className="flex flex-col gap-6 xl:flex-row xl:items-start">
+        <div className="mx-auto w-full max-w-[620px] flex-1"><SkeletonCard lines={6} className="min-h-[360px]" /></div>
+        <div className="w-full shrink-0 xl:w-[300px]"><SkeletonCard lines={8} /></div>
+      </div>
+    );
+  }
   if (error || !data) return <Empty title="Couldn't load this call">{error}</Empty>;
 
   const actions = data.events.map(describeEvent).filter(Boolean) as { text: string; ok: boolean }[];
@@ -286,9 +310,10 @@ function CallView({ id, onChanged }: { id: string; onChanged: () => void }) {
                 role="tab"
                 aria-selected={view === v}
                 onClick={() => setView(v)}
-                className={`h-12 rounded-2xl text-[15px] font-medium transition-colors ${view === v ? "bg-white text-ink" : "bg-white/15 text-white hover:bg-white/25"}`}
+                className={`relative h-12 rounded-2xl text-[15px] font-medium transition-colors duration-[var(--dur-fast)] ${view === v ? "text-ink" : "bg-white/15 text-white hover:bg-white/25"}`}
               >
-                {v === "summary" ? "Summary" : "Transcript"}
+                {view === v && <m.span layoutId="call-tab" transition={SPRING} className="absolute inset-0 bg-white" style={{ borderRadius: 16 }} aria-hidden />}
+                <span className="relative">{v === "summary" ? "Summary" : "Transcript"}</span>
               </button>
             ))}
           </div>
@@ -308,27 +333,30 @@ function CallView({ id, onChanged }: { id: string; onChanged: () => void }) {
             </>
           )}
 
-          {view === "summary" ? (
-            <>
-              <p className="mt-4 text-[13px] text-white/70">Summary</p>
-              <p className="mt-1 text-[16px] leading-relaxed">{data.summary || "No summary yet."}</p>
-            </>
-          ) : (
-            <>
-              <p className="mt-4 text-[13px] text-white/70">Transcript</p>
-              {data.transcript.length === 0 ? (
-                <p className="mt-1 text-[15px] text-white/80">The caller hung up before anything was said.</p>
-              ) : (
-                <ol className="mt-2 flex max-h-[420px] flex-col gap-2 overflow-y-auto pr-1">
-                  {data.transcript.map((t, i) => (
-                    <li key={i} className={`max-w-[85%] rounded-2xl px-3.5 py-2.5 text-[14px] leading-relaxed ${t.role === "assistant" ? "self-start bg-white/15" : "self-end bg-white text-ink"}`}>
-                      {t.text}
-                    </li>
-                  ))}
-                </ol>
-              )}
-            </>
-          )}
+          {/* enter-only crossfade between tabs: no exit, so two states never overlap */}
+          <m.div key={view} variants={fadeRise} initial="initial" animate="animate" transition={{ duration: DUR.fast, ease: EASE_OUT }}>
+            {view === "summary" ? (
+              <>
+                <p className="mt-4 text-[13px] text-white/70">Summary</p>
+                <p className="mt-1 text-[16px] leading-relaxed">{data.summary || "No summary yet."}</p>
+              </>
+            ) : (
+              <>
+                <p className="mt-4 text-[13px] text-white/70">Transcript</p>
+                {data.transcript.length === 0 ? (
+                  <p className="mt-1 text-[15px] text-white/80">The caller hung up before anything was said.</p>
+                ) : (
+                  <ol className="mt-2 flex max-h-[420px] flex-col gap-2 overflow-y-auto pr-1">
+                    {data.transcript.map((t, i) => (
+                      <li key={i} className={`max-w-[85%] rounded-2xl px-3.5 py-2.5 text-[14px] leading-relaxed ${t.role === "assistant" ? "self-start bg-white/15" : "self-end bg-white text-ink"}`}>
+                        {t.text}
+                      </li>
+                    ))}
+                  </ol>
+                )}
+              </>
+            )}
+          </m.div>
 
           <p className="mt-4 text-[13px] text-white/70">Recording</p>
           <Recording url={data.recording_url} seconds={data.duration_seconds} />
@@ -390,8 +418,8 @@ function Thread({ contact }: { contact: CallDetail["contact"] }) {
     setSending(true);
     setErr(null);
     try {
-      const m = await api<Message>(`/contacts/${contact.id}/messages`, { method: "POST", json: { body: text.trim(), channel: "sms" } });
-      thread.setData((prev) => [...(prev ?? []), m]);
+      const sent = await api<Message>(`/contacts/${contact.id}/messages`, { method: "POST", json: { body: text.trim(), channel: "sms" } });
+      thread.setData((prev) => [...(prev ?? []), sent]);
       setText("");
     } catch (ex) {
       setErr(ex instanceof Error ? ex.message : "Couldn't send");
@@ -404,17 +432,24 @@ function Thread({ contact }: { contact: CallDetail["contact"] }) {
     <div className="mx-auto mt-4 max-w-[620px]">
       {items.length > 0 && (
         <ol className="flex flex-col gap-2">
-          {items.map((m) => (
-            <li key={m.id} className="flex flex-col items-end">
-              <span className={`max-w-[85%] rounded-2xl rounded-br-md px-3.5 py-2.5 text-[14px] leading-relaxed text-white ${m.status === "failed" ? "bg-danger/80" : "bg-accent"}`}>
-                {m.body}
+          {items.map((it) => (
+            <m.li
+              key={it.id}
+              variants={fadeRise}
+              initial="initial"
+              animate="animate"
+              transition={{ duration: DUR.base, ease: EASE_OUT }}
+              className="flex flex-col items-end"
+            >
+              <span className={`max-w-[85%] rounded-2xl rounded-br-md px-3.5 py-2.5 text-[14px] leading-relaxed text-white ${it.status === "failed" ? "bg-danger/80" : "bg-accent"}`}>
+                {it.body}
               </span>
               <span className="mt-1 flex items-center gap-2 text-[12px] text-muted">
-                {m.channel === "whatsapp" ? "WhatsApp" : "SMS"} · {ago(m.created_at)}
-                {m.status === "simulated" && <Badge tone="neutral">Simulated</Badge>}
-                {m.status === "failed" && <Badge tone="danger">Failed{m.error ? `: ${m.error}` : ""}</Badge>}
+                {it.channel === "whatsapp" ? "WhatsApp" : "SMS"} · {ago(it.created_at)}
+                {it.status === "simulated" && <Badge tone="neutral">Simulated</Badge>}
+                {it.status === "failed" && <Badge tone="danger">Failed{it.error ? `: ${it.error}` : ""}</Badge>}
               </span>
-            </li>
+            </m.li>
           ))}
         </ol>
       )}
@@ -436,7 +471,7 @@ function Thread({ contact }: { contact: CallDetail["contact"] }) {
             type="submit"
             aria-label="Send text"
             disabled={disabled || sending || !text.trim()}
-            className="btn-primary grid size-10 shrink-0 place-items-center rounded-full text-white transition-opacity disabled:opacity-40"
+            className="btn-primary press grid size-10 shrink-0 place-items-center rounded-full text-white disabled:opacity-40"
           >
             {sending ? <Spinner /> : <Send className="size-4 -translate-x-px" />}
           </button>
@@ -514,8 +549,8 @@ function Recording({ url, seconds }: { url: string; seconds: number }) {
 function ContactPanel({ call, onChanged }: { call: CallDetail; onChanged: () => void }) {
   const c = call.contact;
   const [busy, setBusy] = useState<string | null>(null);
-  const [msg, setMsg] = useState<string | null>(null);
   const [menu, setMenu] = useState(false);
+  const toast = useToast();
 
   const all = [call, ...call.history];
   const avg = all.length ? all.reduce((s, x) => s + x.duration_seconds, 0) / all.length : 0;
@@ -523,12 +558,11 @@ function ContactPanel({ call, onChanged }: { call: CallDetail; onChanged: () => 
 
   async function run(key: string, fn: () => Promise<string>) {
     setBusy(key);
-    setMsg(null);
     try {
-      setMsg(await fn());
+      toast({ title: await fn(), tone: "success" });
       onChanged();
     } catch (e) {
-      setMsg(e instanceof Error ? e.message : "Something went wrong");
+      toast({ title: e instanceof Error ? e.message : "Something went wrong", tone: "danger" });
     } finally {
       setBusy(null);
       setMenu(false);
@@ -586,16 +620,27 @@ function ContactPanel({ call, onChanged }: { call: CallDetail; onChanged: () => 
           >
             <MoreVertical className="size-[18px]" />
           </button>
-          {menu && c && (
-            <div role="menu" className="absolute left-0 top-12 z-10 w-56 rounded-2xl border border-line bg-ground p-1.5 shadow-lg">
-              <button role="menuitem" onClick={block} className="flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-left text-[14px] hover:bg-surface">
-                <Ban className="size-4" /> {c.blocked ? "Unblock number" : "Block number"}
-              </button>
-              <button role="menuitem" onClick={spam} className="flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-left text-[14px] hover:bg-surface">
-                <ShieldAlert className="size-4" /> {c.kind === "spam" ? "Not spam" : "Mark as spam"}
-              </button>
-            </div>
-          )}
+          <AnimatePresence>
+            {menu && c && (
+              <m.div
+                key="menu"
+                role="menu"
+                variants={popIn}
+                initial="initial"
+                animate="animate"
+                exit="exit"
+                transition={{ duration: DUR.fast, ease: EASE_OUT }}
+                className="absolute left-0 top-12 z-10 w-56 origin-top-left rounded-2xl border border-line bg-ground p-1.5 shadow-lg"
+              >
+                <button role="menuitem" onClick={block} className="flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-left text-[14px] hover:bg-surface">
+                  <Ban className="size-4" /> {c.blocked ? "Unblock number" : "Block number"}
+                </button>
+                <button role="menuitem" onClick={spam} className="flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-left text-[14px] hover:bg-surface">
+                  <ShieldAlert className="size-4" /> {c.kind === "spam" ? "Not spam" : "Mark as spam"}
+                </button>
+              </m.div>
+            )}
+          </AnimatePresence>
         </div>
 
         <div className="mt-5 flex flex-wrap gap-2">
@@ -613,7 +658,6 @@ function ContactPanel({ call, onChanged }: { call: CallDetail; onChanged: () => 
             </Button>
           )}
         </div>
-        {msg && <p role="status" className="mt-3 text-[13px] text-muted">{msg}</p>}
 
         {extracted.length > 0 && (
           <>

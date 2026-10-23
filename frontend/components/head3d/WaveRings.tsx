@@ -40,13 +40,14 @@ export function WaveRings({ level = 0 }: { level?: number }) {
       ctx.clearRect(0, 0, w, h);
       const cx = w / 2;
       const cy = h * 0.55;
-      const maxR = Math.min(w, h * 1.4) * 0.48;
+      // rings extend past the head so they read behind it, as in the template
+      const maxR = Math.min(w, h * 1.4) * 0.56;
       const rings = 16;
       for (let k = 0; k < rings; k++) {
         const base = maxR * (0.32 + (k / rings) * 0.68);
         const dots = Math.floor(base / 1.7);
-        const alpha = 0.22 + 0.4 * (1 - Math.abs(k / rings - 0.45) * 1.6);
-        ctx.fillStyle = `rgba(165, 172, 240, ${Math.max(0.1, alpha)})`;
+        const alpha = 0.3 + 0.45 * (1 - Math.abs(k / rings - 0.45) * 1.6);
+        ctx.fillStyle = `rgba(190, 196, 255, ${Math.max(0.22, alpha)})`;
         for (let i = 0; i < dots; i++) {
           const a = (i / dots) * Math.PI * 2;
           const wob =
@@ -54,7 +55,7 @@ export function WaveRings({ level = 0 }: { level?: number }) {
             Math.sin(a * 3 - t * 0.0004 + k) * (4 + amp * 30) +
             Math.sin(a * 13 + t * 0.001) * amp * 10;
           const r = base + wob;
-          ctx.fillRect(cx + Math.cos(a) * r, cy + Math.sin(a) * r * 0.92, 2, 2);
+          ctx.fillRect(cx + Math.cos(a) * r, cy + Math.sin(a) * r * 0.92, 2.4, 2.4);
         }
       }
       if (!reduced) raf = requestAnimationFrame(draw);

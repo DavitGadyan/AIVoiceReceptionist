@@ -1,11 +1,14 @@
 "use client";
 
 import { CalendarCheck, ChevronRight, Clock, MessageSquareText, Play, Plug, Settings2, Siren, Square, Workflow } from "lucide-react";
+import { m } from "motion/react";
 import Link from "next/link";
 import { useEffect, useState, type ReactNode } from "react";
 import { Badge, Card, PageHeader, Segmented, Spinner, Toggle } from "@/components/ui/primitives";
+import { SkeletonCard } from "@/components/ui/Skeleton";
 import { api } from "@/lib/api";
 import { phone } from "@/lib/format";
+import { fadeRise, group, stagger } from "@/lib/motion";
 import type { PhoneNumber, Profile } from "@/lib/types";
 import { useApi } from "@/lib/useApi";
 
@@ -66,7 +69,7 @@ export default function FlowPage() {
     synth.speak(u);
   }
 
-  if (!p) return prof.error ? <Card className="p-6 text-danger">{prof.error}</Card> : <div className="grid h-64 place-items-center text-muted"><Spinner /></div>;
+  if (!p) return prof.error ? <Card className="p-6 text-danger">{prof.error}</Card> : <SkeletonCard lines={8} className="min-h-[480px]" />;
 
   const main = nums.data?.[0];
   const aiDay = p.routing_mode === "AI_FIRST" || p.routing_mode === "AI_OVERFLOW";
@@ -159,8 +162,10 @@ function Branch({ dot, title, children }: { dot: string; title: string; children
         <span className={`size-2 rounded-full ${dot}`} /> {title}
       </span>
       <div className="h-5 w-px bg-line" />
-      {/* rows hang off a left rail, like the template's bracket */}
-      <div className="w-full space-y-3 border-l-2 border-line pl-4">{children}</div>
+      {/* rows hang off a left rail, like the template's bracket; they stagger in once on load */}
+      <m.div variants={group} initial="initial" animate="animate" transition={stagger(40)} className="w-full space-y-3 border-l-2 border-line pl-4">
+        {children}
+      </m.div>
     </div>
   );
 }
@@ -171,7 +176,7 @@ function FlowRow({
   label: string; sub?: string; toggle?: boolean; onToggle?: (v: boolean) => void; onPlay?: () => void; playing?: boolean; link?: string; icon?: ReactNode;
 }) {
   return (
-    <div className="flex items-center gap-3 rounded-2xl border border-line bg-ground px-4 py-3 shadow-[0_1px_0_var(--color-line)]">
+    <m.div variants={fadeRise} className="flex items-center gap-3 rounded-2xl border border-line bg-ground px-4 py-3 shadow-[0_1px_0_var(--color-line)]">
       {onToggle !== undefined && toggle !== undefined && <Toggle checked={toggle} onChange={onToggle} label={label} />}
       {onPlay ? (
         <button onClick={onPlay} aria-label={playing ? "Stop preview" : `Preview: ${label}`} className="grid size-8 shrink-0 place-items-center rounded-full text-ink hover:bg-surface">
@@ -189,6 +194,6 @@ function FlowRow({
           <ChevronRight className="size-4" />
         </Link>
       )}
-    </div>
+    </m.div>
   );
 }

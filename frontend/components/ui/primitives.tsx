@@ -1,11 +1,16 @@
-import type { ButtonHTMLAttributes, HTMLAttributes, ReactNode } from "react";
+"use client";
+
+import { m } from "motion/react";
+import { useId, type ButtonHTMLAttributes, type HTMLAttributes, type ReactNode } from "react";
+import { SPRING, SPRING_SNAPPY } from "@/lib/motion";
 
 type Variant = "primary" | "dark" | "soft" | "ghost" | "danger";
 
+/* `press` (globals.css) owns the transition: scale(0.97) on :active plus colour fades. */
 const VARIANTS: Record<Variant, string> = {
-  primary: "btn-primary text-white active:translate-y-px",
-  dark: "bg-ink text-on-ink hover:opacity-90 active:translate-y-px",
-  soft: "glass text-ink hover:bg-surface active:translate-y-px",
+  primary: "btn-primary text-white",
+  dark: "bg-ink text-on-ink hover:opacity-90",
+  soft: "glass text-ink hover:bg-surface",
   ghost: "text-ink hover:bg-surface",
   danger: "bg-danger/10 text-danger hover:bg-danger/15",
 };
@@ -19,7 +24,7 @@ export function Button({
   const sz = size === "sm" ? "h-9 px-4 text-[13px]" : size === "lg" ? "h-13 px-7 text-[15px]" : "h-11 px-5 text-[14px]";
   return (
     <button
-      className={`inline-flex items-center justify-center gap-2 rounded-full font-semibold transition-[background,transform,opacity] duration-[var(--dur-fast)] disabled:pointer-events-none disabled:opacity-50 ${sz} ${VARIANTS[variant]} ${className}`}
+      className={`press inline-flex items-center justify-center gap-2 rounded-full font-semibold disabled:pointer-events-none disabled:opacity-50 ${sz} ${VARIANTS[variant]} ${className}`}
       {...rest}
     />
   );
@@ -30,7 +35,7 @@ export function IconButton({ className = "", label, ...rest }: ButtonHTMLAttribu
     <button
       aria-label={label}
       title={label}
-      className={`glass grid size-11 place-items-center rounded-2xl bg-surface text-ink transition-colors hover:bg-line active:translate-y-px ${className}`}
+      className={`glass press grid size-11 place-items-center rounded-2xl bg-surface text-ink hover:bg-line ${className}`}
       {...rest}
     />
   );
@@ -51,20 +56,34 @@ export function Pill({ children, active, onClick, className = "" }: { children: 
   );
 }
 
+/** Pill tabs with one sliding indicator (layoutId) instead of a colour swap. */
 export function Segmented<T extends string>({ value, options, onChange, className = "" }: { value: T; options: { value: T; label: ReactNode }[]; onChange: (v: T) => void; className?: string }) {
+  const id = useId();
   return (
     <div role="tablist" className={`glass inline-flex max-w-full overflow-x-auto rounded-full p-1 ${className}`}>
-      {options.map((o) => (
-        <button
-          key={o.value}
-          role="tab"
-          aria-selected={value === o.value}
-          onClick={() => onChange(o.value)}
-          className={`inline-flex h-10 shrink-0 items-center gap-2 whitespace-nowrap rounded-full px-5 text-[14px] font-medium transition-colors ${value === o.value ? "bg-ground text-ink" : "text-muted hover:text-ink"}`}
-        >
-          {o.label}
-        </button>
-      ))}
+      {options.map((o) => {
+        const active = value === o.value;
+        return (
+          <button
+            key={o.value}
+            role="tab"
+            aria-selected={active}
+            onClick={() => onChange(o.value)}
+            className={`relative inline-flex h-10 shrink-0 items-center gap-2 whitespace-nowrap rounded-full px-5 text-[14px] font-medium transition-colors duration-[var(--dur-fast)] ${active ? "text-ink" : "text-muted hover:text-ink"}`}
+          >
+            {active && (
+              <m.span
+                layoutId={`seg-${id}`}
+                transition={SPRING}
+                className="absolute inset-0 bg-ground"
+                style={{ borderRadius: 9999 }}
+                aria-hidden
+              />
+            )}
+            <span className="relative inline-flex items-center gap-2">{o.label}</span>
+          </button>
+        );
+      })}
     </div>
   );
 }
@@ -109,10 +128,31 @@ export function Toggle({ checked, onChange, label }: { checked: boolean; onChang
       aria-checked={checked}
       aria-label={label}
       onClick={() => onChange(!checked)}
-      className={`relative h-6 w-11 shrink-0 rounded-full transition-colors ${checked ? "bg-accent" : "bg-line"}`}
+      className={`relative h-6 w-11 shrink-0 rounded-full transition-colors duration-[var(--dur-fast)] ${checked ? "bg-accent" : "bg-line"}`}
     >
-      <span className={`absolute top-0.5 size-5 rounded-full bg-white shadow transition-transform duration-[var(--dur-fast)] ${checked ? "translate-x-[22px]" : "translate-x-0.5"}`} />
+      <m.span
+        initial={false}
+        animate={{ transform: checked ? "translateX(22px)" : "translateX(2px)" }}
+        transition={SPRING_SNAPPY}
+        className="absolute left-0 top-0.5 size-5 rounded-full bg-white shadow"
+      />
     </button>
+  );
+}
+
+/** A dot with an expanding ring behind it — live calls, "Live now". Colour comes from `text-*`. */
+export function LiveDot({ className = "" }: { className?: string }) {
+  return <span aria-hidden className={`live-dot inline-block size-2 shrink-0 rounded-full bg-current ${className}`} />;
+}
+
+/** Three breathing dots for "the assistant is typing". */
+export function TypingDots({ className = "" }: { className?: string }) {
+  return (
+    <span aria-label="Typing" role="status" className={`inline-flex items-center gap-1 ${className}`}>
+      <span className="typing-dot size-1.5 rounded-full bg-current" />
+      <span className="typing-dot size-1.5 rounded-full bg-current" />
+      <span className="typing-dot size-1.5 rounded-full bg-current" />
+    </span>
   );
 }
 

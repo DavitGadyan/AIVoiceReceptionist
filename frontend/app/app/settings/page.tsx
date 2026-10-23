@@ -3,11 +3,15 @@
 import {
   BookOpen, Building2, CalendarCheck, Clock, Copy, FileUp, History, Link2, ListChecks, Mic, PhoneForwarded, Plug, ShieldCheck, Siren, Tag, Trash2,
 } from "lucide-react";
+import { AnimatePresence, m } from "motion/react";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { Badge, Button, Card, Field, PageHeader, Spinner, Toggle, inputCls } from "@/components/ui/primitives";
+import { SkeletonCard, SkeletonRows } from "@/components/ui/Skeleton";
+import { useToast } from "@/components/ui/Toast";
 import { api } from "@/lib/api";
 import { ago } from "@/lib/format";
+import { DUR, EASE_OUT, SPRING, fadeRise } from "@/lib/motion";
 import type { Escalation, IntakeField, Policy, Faq, Preset, Profile, Service } from "@/lib/types";
 import { useApi } from "@/lib/useApi";
 import { Area, ChipsInput, Modal, RepeatList, Section, Text } from "./_parts";
@@ -46,20 +50,14 @@ export default function SettingsPage() {
   const [tab, setTab] = useState<TabKey>("business");
   const [draft, setDraft] = useState<Profile | null>(null);
   const [saving, setSaving] = useState(false);
-  const [flash, setFlash] = useState<string | null>(null);
   const [saveErr, setSaveErr] = useState<string | null>(null);
+  const toast = useToast();
 
   useEffect(() => {
     if (data) setDraft(structuredClone(data.profile));
   }, [data]);
 
   const dirty = useMemo(() => !!data && !!draft && JSON.stringify(data.profile) !== JSON.stringify(draft), [data, draft]);
-
-  useEffect(() => {
-    if (!flash) return;
-    const t = setTimeout(() => setFlash(null), 3500);
-    return () => clearTimeout(t);
-  }, [flash]);
 
   const set = <K extends keyof Profile>(k: K, v: Profile[K]) => setDraft((d) => (d ? { ...d, [k]: v } : d));
 
@@ -69,7 +67,7 @@ export default function SettingsPage() {
     setSaveErr(null);
     try {
       const r = await api<{ version: number }>("/settings/profile", { method: "PUT", json: draft });
-      setFlash(`Saved as version ${r.version}. The next call uses it.`);
+      toast({ title: `Saved as version ${r.version}`, description: "The next call uses it.", tone: "success" });
       await reload();
     } catch (e) {
       setSaveErr(e instanceof Error ? e.message : "Save failed");
@@ -78,7 +76,20 @@ export default function SettingsPage() {
     }
   }
 
-  if (loading && !draft) return <div className="grid h-64 place-items-center text-muted"><Spinner /></div>;
+  if (loading && !draft) {
+    return (
+      <div className="pb-24">
+        <PageHeader title="Settings" />
+        <div className="grid gap-6 lg:grid-cols-[230px_minmax(0,1fr)]">
+          <SkeletonRows n={6} avatar={false} />
+          <div className="space-y-6">
+            <SkeletonCard lines={4} />
+            <SkeletonCard lines={3} />
+          </div>
+        </div>
+      </div>
+    );
+  }
   if (error && !draft) return <Card className="p-6 text-danger">Could not load settings: {error}</Card>;
   if (!draft || !data) return null;
 
@@ -89,25 +100,30 @@ export default function SettingsPage() {
         sub={<>Live config <Badge tone="accent">v{data.version}</Badge></>}
         actions={<PromptPreviewButton />}
       />
-      {flash && <div role="status" className="mb-4 rounded-2xl bg-success/10 px-4 py-3 text-[14px] font-medium text-success">{flash}</div>}
 
       <div className="grid gap-6 lg:grid-cols-[230px_minmax(0,1fr)]">
-        {/* sub-nav: horizontal scroller on mobile, sticky column on desktop */}
+        {/* sub-nav: horizontal scroller on mobile, sticky column on desktop. One accent pill slides between tabs. */}
         <nav aria-label="Settings sections" className="-mx-4 flex gap-1 overflow-x-auto px-4 pb-1 lg:sticky lg:top-6 lg:mx-0 lg:flex-col lg:self-start lg:overflow-visible lg:px-0">
-          {TABS.map(({ key, label, icon: Icon }) => (
-            <button
-              key={key}
-              onClick={() => setTab(key)}
-              aria-current={tab === key ? "page" : undefined}
-              className={`flex h-11 shrink-0 items-center gap-3 rounded-xl px-3 text-left text-[14px] font-medium transition-colors ${tab === key ? "bg-accent text-white" : "text-ink/80 hover:bg-surface"}`}
-            >
-              <Icon className="size-[18px]" strokeWidth={1.8} />
-              {label}
-            </button>
-          ))}
+          {TABS.map(({ key, label, icon: Icon }) => {
+            const active = tab === key;
+            return (
+              <button
+                key={key}
+                onClick={() => setTab(key)}
+                aria-current={active ? "page" : undefined}
+                className={`relative flex h-11 shrink-0 items-center gap-3 rounded-xl px-3 text-left text-[14px] font-medium transition-colors duration-[var(--dur-fast)] ${active ? "text-white" : "text-ink/80 hover:bg-surface"}`}
+              >
+                {active && <m.span layoutId="settings-tab" transition={SPRING} className="absolute inset-0 bg-accent" style={{ borderRadius: 12 }} aria-hidden />}
+                <span className="relative flex items-center gap-3">
+                  <Icon className="size-[18px]" strokeWidth={1.8} />
+                  {label}
+                </span>
+              </button>
+            );
+          })}
         </nav>
 
-        <div className="min-w-0 space-y-8">
+        <m.div key={tab} variants={fadeRise} initial="initial" animate="animate" transition={{ duration: DUR.fast, ease: EASE_OUT }} className="min-w-0 space-y-8">
           {tab === "business" && <BusinessTab draft={draft} set={set} onPreset={reload} />}
           {tab === "assistant" && <AssistantTab draft={draft} set={set} />}
           {tab === "hours" && <HoursTab draft={draft} set={set} />}
@@ -119,22 +135,31 @@ export default function SettingsPage() {
           {tab === "compliance" && <ComplianceTab draft={draft} set={set} />}
           {tab === "integrations" && <IntegrationsTab />}
           {tab === "versions" && <VersionsTab current={data.version} onRestore={reload} />}
-        </div>
+        </m.div>
       </div>
 
-      {(dirty || saveErr) && (
-        <div className="fixed inset-x-0 bottom-4 z-30 flex justify-center px-4">
-          <div className="flex w-full max-w-xl flex-wrap items-center justify-between gap-3 rounded-full bg-ink py-2 pl-5 pr-2 text-on-ink shadow-2xl">
-            <span className="text-[14px] font-medium">{saveErr ? <span className="text-danger">{saveErr}</span> : "Unsaved changes"}</span>
-            <div className="flex gap-2">
-              <Button size="sm" variant="ghost" className="text-on-ink hover:bg-white/10" onClick={() => { setDraft(structuredClone(data.profile)); setSaveErr(null); }}>
-                Discard
-              </Button>
-              <Button size="sm" variant="primary" onClick={save} disabled={saving}>{saving ? <Spinner /> : "Save"}</Button>
+      <AnimatePresence>
+        {(dirty || saveErr) && (
+          <m.div
+            key="unsaved"
+            initial={{ opacity: 0, transform: "translateY(calc(100% + 16px))" }}
+            animate={{ opacity: 1, transform: "translateY(0px)" }}
+            exit={{ opacity: 0, transform: "translateY(calc(100% + 16px))" }}
+            transition={{ duration: DUR.base, ease: EASE_OUT }}
+            className="fixed inset-x-0 bottom-4 z-30 flex justify-center px-4"
+          >
+            <div className="flex w-full max-w-xl flex-wrap items-center justify-between gap-3 rounded-full bg-ink py-2 pl-5 pr-2 text-on-ink shadow-2xl">
+              <span className="text-[14px] font-medium">{saveErr ? <span className="text-danger">{saveErr}</span> : "Unsaved changes"}</span>
+              <div className="flex gap-2">
+                <Button size="sm" variant="ghost" className="text-on-ink hover:bg-white/10" onClick={() => { setDraft(structuredClone(data.profile)); setSaveErr(null); }}>
+                  Discard
+                </Button>
+                <Button size="sm" variant="primary" onClick={save} disabled={saving}>{saving ? <Spinner /> : "Save"}</Button>
+              </div>
             </div>
-          </div>
-        </div>
-      )}
+          </m.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
@@ -149,11 +174,13 @@ function PromptPreviewButton() {
       <Button size="sm" onClick={async () => { setOpen(true); setPrompt(null); try { setPrompt((await api<{ prompt: string }>("/settings/prompt-preview")).prompt); } catch (e) { setPrompt(`Error: ${e instanceof Error ? e.message : e}`); } }}>
         <ListChecks className="size-4" /> Preview prompt
       </Button>
-      {open && (
-        <Modal title="System prompt the receptionist runs with (saved config)" onClose={() => setOpen(false)}>
-          {prompt === null ? <Spinner /> : <pre className="whitespace-pre-wrap rounded-2xl bg-surface p-4 text-[13px] leading-relaxed">{prompt}</pre>}
-        </Modal>
-      )}
+      <AnimatePresence>
+        {open && (
+          <Modal key="prompt-preview" title="System prompt the receptionist runs with (saved config)" onClose={() => setOpen(false)}>
+            {prompt === null ? <Spinner /> : <pre className="whitespace-pre-wrap rounded-2xl bg-surface p-4 text-[13px] leading-relaxed">{prompt}</pre>}
+          </Modal>
+        )}
+      </AnimatePresence>
     </>
   );
 }
@@ -543,7 +570,7 @@ function IntegrationsTab() {
   const calcom = ints.data?.find((i) => i.kind === "calcom");
   const [cal, setCal] = useState({ event_type_id: "", api_key: "" });
   const [hookUrl, setHookUrl] = useState("");
-  const [msg, setMsg] = useState<string | null>(null);
+  const toast = useToast();
 
   useEffect(() => {
     if (calcom) setCal((c) => ({ ...c, event_type_id: String(calcom.config.event_type_id ?? "") }));
@@ -553,10 +580,10 @@ function IntegrationsTab() {
     try {
       await api("/integrations", { method: "PUT", json: { kind: "calcom", config: { event_type_id: Number(cal.event_type_id) || cal.event_type_id }, secrets: cal.api_key ? { api_key: cal.api_key } : {}, active: true } });
       setCal((c) => ({ ...c, api_key: "" }));
-      setMsg("Cal.com saved. Choose 'Cal.com' under Booking to use it.");
+      toast({ title: "Cal.com saved", description: "Choose 'Cal.com' under Booking to use it.", tone: "success" });
       await ints.reload();
     } catch (e) {
-      setMsg(e instanceof Error ? e.message : "Failed");
+      toast({ title: e instanceof Error ? e.message : "Failed", tone: "danger" });
     }
   }
 
@@ -565,15 +592,15 @@ function IntegrationsTab() {
     try {
       await api("/webhooks", { method: "POST", json: { url: hookUrl, events: ["call.ended"] } });
       setHookUrl("");
+      toast({ title: "Webhook added", tone: "success" });
       await hooks.reload();
     } catch (err) {
-      setMsg(err instanceof Error ? err.message : "Failed");
+      toast({ title: err instanceof Error ? err.message : "Failed", tone: "danger" });
     }
   }
 
   return (
     <>
-      {msg && <p role="status" className="rounded-2xl bg-peri-soft px-4 py-3 text-[14px]">{msg}</p>}
       <Section title="Cal.com" desc="Live availability and bookings in the client's own Cal.com." aside={calcom ? <Badge tone="success" dot>Connected</Badge> : <Badge>Not connected</Badge>}>
         <div className="grid gap-4 sm:grid-cols-[1fr_1fr_auto] sm:items-end">
           <Field label="Event type ID"><Text label="Event type ID" value={cal.event_type_id} onChange={(v) => setCal({ ...cal, event_type_id: v })} /></Field>
