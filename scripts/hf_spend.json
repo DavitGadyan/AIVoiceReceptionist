@@ -1,0 +1,67 @@
+[
+  {
+    "timestamp": "2026-10-23T00:06:58+00:00",
+    "model": "space:FLUX.1-schnell",
+    "provider": "hf-space-zerogpu",
+    "kind": "head",
+    "est_cost_usd": 0.0,
+    "output": "scripts/out/head_101.png"
+  },
+  {
+    "timestamp": "2026-10-23T00:07:04+00:00",
+    "model": "space:FLUX.1-schnell",
+    "provider": "hf-space-zerogpu",
+    "kind": "head",
+    "est_cost_usd": 0.0,
+    "output": "scripts/out/head_102.png"
+  },
+  {
+    "timestamp": "2026-10-23T00:07:10+00:00",
+    "model": "space:FLUX.1-schnell",
+    "provider": "hf-space-zerogpu",
+    "kind": "head",
+    "est_cost_usd": 0.0,
+    "output": "scripts/out/head_103.png"
+  },
+  {
+    "timestamp": "2026-10-23T01:19:36+00:00",
+    "model": "higgsfield/soul_2",
+    "provider": "higgsfield-mcp",
+    "kind": "portrait x4",
+    "est_cost_usd": 0.0,
+    "output": "scripts/out/portrait_{1..4}.png",
+    "note": "0.12 Higgsfield credits, not HF dollars"
+  },
+  {
+    "timestamp": "2026-10-23T01:24:05+00:00",
+    "model": "onnx-community/depth-anything-v2-small",
+    "provider": "local-onnx",
+    "kind": "depth",
+    "est_cost_usd": 0.0,
+    "output": "frontend/public/images/receptionist-depth.png"
+  },
+  {
+    "timestamp": "2026-10-23T08:57:00+00:00",
+    "model": "space:FLUX.1-schnell",
+    "provider": "hf-space-zerogpu",
+    "kind": "marketing",
+    "est_cost_usd": 0.0,
+    "output": "scripts/out/industry-home-services.png"
+  },
+  {
+    "timestamp": "2026-10-23T08:57:06+00:00",
+    "model": "space:FLUX.1-schnell",
+    "provider": "hf-space-zerogpu",
+    "kind": "marketing",
+    "est_cost_usd": 0.0,
+    "output": "scripts/out/industry-clinic.png"
+  },
+  {
+    "timestamp": "2026-10-23T08:57:12+00:00",
+    "model": "space:FLUX.1-schnell",
+    "provider": "hf-space-zerogpu",
+    "kind": "marketing",
+    "est_cost_usd": 0.0,
+    "output": "scripts/out/industry-salon.png"
+  }
+]

@@ -1,0 +1,259 @@
+@import "tailwindcss";
+
+/*
+ * Receptra design tokens — IVR Web App template, re-skinned as liquid glass.
+ *
+ * Every panel is a translucent, frosted pane over a slow-moving aurora. The
+ * template's anatomy (black marketing ground, light app frame with a left
+ * sidebar, white cards, pill buttons) is unchanged; only the material is.
+ * Do not hardcode a colour in a component; add or reuse a token here.
+ */
+@theme {
+  --color-ground: rgba(255, 255, 255, 0.62);
+  --color-surface: rgba(96, 92, 190, 0.09);
+  --color-line: rgba(60, 56, 120, 0.13);
+  --color-ink: #14131f;
+  --color-on-ink: #ffffff;
+  --color-muted: #5f6380;
+  --color-accent: #5b5bf0;
+  --color-accent-ink: #4646d6;
+  --color-accent2: #c08bf5;
+  --color-peri: #8f93d6;
+  --color-peri-soft: rgba(91, 91, 240, 0.12);
+  --color-night: #060609;
+  --color-night-2: rgba(255, 255, 255, 0.07);
+  --color-success: #16a34a;
+  --color-warn: #d97706;
+  --color-danger: #dc2626;
+
+  --font-display: var(--font-display-loaded), "Sora", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-body: var(--font-body-loaded), "Manrope", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+
+  --radius-card: 22px;
+  --radius-frame: 30px;
+
+  --spacing-section: 120px;
+  --spacing-section-sm: 72px;
+}
+
+:root {
+  color-scheme: light;
+
+  /* Glass material */
+  --glass-blur: 22px;
+  --glass-edge: rgba(255, 255, 255, 0.9);
+  --glass-edge-bottom: rgba(255, 255, 255, 0.35);
+  --glass-shadow: 0 18px 50px -24px rgba(50, 40, 140, 0.35);
+  --glass-sheen: linear-gradient(118deg, rgba(255, 255, 255, 0.45) 0%, rgba(255, 255, 255, 0) 38%, rgba(255, 255, 255, 0) 62%, rgba(255, 255, 255, 0.18) 100%);
+
+  /* Aurora behind the glass */
+  --aurora-base: #e8e9f6;
+  --aurora-1: rgba(143, 147, 214, 0.75);
+  --aurora-2: rgba(192, 139, 245, 0.6);
+  --aurora-3: rgba(125, 211, 252, 0.6);
+  --aurora-4: rgba(255, 170, 235, 0.5);
+
+  /* The template's featured-card gradient (Finished Call card, Waiting for payment). */
+  --grad-peri: linear-gradient(165deg, rgba(116, 121, 207, 0.92) 0%, rgba(142, 144, 211, 0.9) 55%, rgba(171, 166, 217, 0.88) 100%);
+  /* Chrome reflections: the italic hero word and the active process circle. */
+  --grad-chrome: linear-gradient(120deg, #e8e4ff 0%, #c08bf5 40%, #8f93d6 70%, #7dd3fc 100%);
+  --size-display: clamp(2.75rem, 8vw, 7.5rem);
+  --size-h1: clamp(2rem, 4vw, 3.25rem);
+  --size-h2: clamp(1.5rem, 2.5vw, 2.25rem);
+  --size-statement: clamp(1.5rem, 3.1vw, 2.75rem);
+  --size-body: 16px;
+  --leading-display: 1.02;
+
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --dur-fast: 180ms;
+  --dur-base: 320ms;
+  --dur-slow: 600ms;
+}
+
+/* Dark glass: the marketing site, and the app's "Mode" toggle. */
+[data-theme="dark"] {
+  color-scheme: dark;
+  --color-ground: rgba(22, 22, 34, 0.55);
+  --color-surface: rgba(255, 255, 255, 0.08);
+  --color-line: rgba(255, 255, 255, 0.14);
+  --color-ink: #f4f4f8;
+  --color-on-ink: #111118;
+  --color-muted: #a3a7bc;
+  --color-peri-soft: rgba(143, 147, 214, 0.2);
+
+  --glass-edge: rgba(255, 255, 255, 0.32);
+  --glass-edge-bottom: rgba(255, 255, 255, 0.08);
+  --glass-shadow: 0 24px 60px -24px rgba(0, 0, 0, 0.6);
+  --glass-sheen: linear-gradient(118deg, rgba(255, 255, 255, 0.16) 0%, rgba(255, 255, 255, 0) 40%, rgba(255, 255, 255, 0) 65%, rgba(255, 255, 255, 0.06) 100%);
+
+  --aurora-base: #07070c;
+  --aurora-1: rgba(91, 91, 240, 0.55);
+  --aurora-2: rgba(192, 139, 245, 0.42);
+  --aurora-3: rgba(56, 189, 248, 0.38);
+  --aurora-4: rgba(236, 72, 153, 0.3);
+}
+
+/*
+ * Everything below sits inside a @layer on purpose: Tailwind v4 declares
+ * `@layer theme, base, components, utilities`, and any unlayered rule outranks
+ * every layered one. Layering keeps utilities winnable.
+ */
+@layer base {
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  background: var(--aurora-base);
+  color: var(--color-ink);
+  font-family: var(--font-body);
+  font-size: var(--size-body);
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+h1, h2, h3, .display {
+  font-family: var(--font-display);
+  line-height: var(--leading-display);
+  text-wrap: balance;
+}
+
+p {
+  text-wrap: pretty;
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 3px;
+  border-radius: 4px;
+}
+
+::selection {
+  background: var(--color-accent);
+  color: #fff;
+}
+
+button { cursor: pointer; }
+
+}
+
+@layer components {
+
+/*
+ * Liquid glass. Any element painted with the ground or night-2 token is a pane:
+ * it blurs what is behind it, carries a bright top edge (the "lip" of the glass)
+ * and a faint diagonal sheen. `.glass` applies the same material explicitly.
+ */
+.bg-ground, .bg-night-2, .glass {
+  position: relative;
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(170%);
+  backdrop-filter: blur(var(--glass-blur)) saturate(170%);
+  box-shadow: inset 0 1px 0 var(--glass-edge), inset 0 -1px 0 var(--glass-edge-bottom), var(--glass-shadow);
+}
+.glass { background: var(--color-ground); }
+
+.bg-ground::before, .bg-night-2::before, .glass::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: var(--glass-sheen);
+  pointer-events: none;
+  z-index: 0;
+}
+.bg-ground > *, .bg-night-2 > *, .glass > * { position: relative; z-index: 1; }
+
+/* Frame-level glass (the app shell, the mobile menu) blurs more and sits flatter. */
+.glass-frame {
+  --glass-blur: 36px;
+  box-shadow: inset 0 1px 0 var(--glass-edge), 0 40px 120px -40px rgba(20, 10, 80, 0.45);
+}
+
+/* Solid accent controls get a glossy lip instead of blur. */
+.btn-primary {
+  background: linear-gradient(180deg, color-mix(in srgb, var(--color-accent) 85%, white) 0%, var(--color-accent) 60%, var(--color-accent-ink) 100%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.45), inset 0 -1px 0 rgba(0, 0, 0, 0.15), 0 10px 28px -10px color-mix(in srgb, var(--color-accent) 70%, transparent);
+}
+.btn-primary:hover { filter: brightness(1.06); }
+
+/*
+ * Aurora: four drifting colour blobs behind every page. Two layers moving at
+ * different speeds read as liquid; the SVG displacement filter (see Aurora.tsx)
+ * ripples their edges.
+ */
+.aurora {
+  position: fixed;
+  inset: -15%;
+  z-index: -1;
+  pointer-events: none;
+  overflow: hidden;
+  background: var(--aurora-base);
+}
+.aurora::before, .aurora::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  filter: url(#liquid-distort) blur(42px);
+  will-change: transform;
+}
+.aurora::before {
+  background:
+    radial-gradient(38% 46% at 22% 28%, var(--aurora-1), transparent 72%),
+    radial-gradient(34% 44% at 78% 24%, var(--aurora-2), transparent 72%),
+    radial-gradient(42% 40% at 62% 84%, var(--aurora-3), transparent 72%);
+  animation: aurora-a 34s ease-in-out infinite alternate;
+}
+.aurora::after {
+  background:
+    radial-gradient(28% 34% at 18% 82%, var(--aurora-4), transparent 72%),
+    radial-gradient(26% 30% at 50% 50%, var(--aurora-2), transparent 72%);
+  animation: aurora-b 26s ease-in-out infinite alternate;
+  opacity: 0.8;
+}
+@keyframes aurora-a {
+  from { transform: translate3d(-3%, -2%, 0) scale(1); }
+  to { transform: translate3d(4%, 5%, 0) scale(1.12); }
+}
+@keyframes aurora-b {
+  from { transform: translate3d(3%, 4%, 0) rotate(0deg); }
+  to { transform: translate3d(-5%, -3%, 0) rotate(8deg); }
+}
+
+/* Section rhythm. */
+.section-pad {
+  padding-block: var(--spacing-section-sm);
+}
+@media (min-width: 768px) {
+  .section-pad {
+    padding-block: var(--spacing-section);
+  }
+}
+
+/* Reveal-on-scroll. */
+[data-reveal] {
+  opacity: 0;
+  transform: translateY(20px);
+  transition: opacity var(--dur-slow) var(--ease-out),
+              transform var(--dur-slow) var(--ease-out);
+  transition-delay: var(--reveal-delay, 0ms);
+  will-change: opacity, transform;
+}
+[data-reveal="shown"] {
+  opacity: 1;
+  transform: none;
+}
+
+}
+
+/* Unlayered on purpose: reduced motion outranks everything. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  [data-reveal] { opacity: 1; transform: none; }
+}

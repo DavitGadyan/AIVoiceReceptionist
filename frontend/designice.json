@@ -1,0 +1,231 @@
+{
+  "project": "fe",
+  "prompt": "AI voice receptionist platform dashboard",
+  "platform": "web",
+  "company": "Receptra",
+  "overrides": {
+    "primary": "#5B5BF0",
+    "secondary": "#C08BF5",
+    "font_display": "Sora",
+    "font_body": "Manrope",
+    "sections": [
+      "nav",
+      "hero",
+      "about",
+      "process",
+      "features",
+      "pricing",
+      "cta",
+      "footer"
+    ],
+    "platform": "web",
+    "company": "Receptra"
+  },
+  "notes": [
+    "accent2 #C08BF5 on #FFFFFF is only 2.5:1 - fine for fills, but do not set body text in it"
+  ],
+  "template_tokens": {
+    "source": "fallback",
+    "roles": {
+      "ground": "#FFFFFF",
+      "surface": "#F5F5F7",
+      "ink": "#111113",
+      "muted": "#6B7280",
+      "accent": "#3D5AFE",
+      "accent2": "#2E40AC"
+    },
+    "palette": [],
+    "fonts": [
+      "Space Grotesk",
+      "Inter"
+    ],
+    "style": "playful",
+    "mode": "light"
+  },
+  "reference_design": {
+    "slug": "ivr-web-app",
+    "title": "IVR Web App",
+    "path": "IVR Web app",
+    "use_case": "",
+    "reference_url": "",
+    "media": [
+      {
+        "path": "IVR Web app/image_original1.png",
+        "kind": "image",
+        "name": "image_original1.png",
+        "format": "png",
+        "width": 2880,
+        "height": 2048,
+        "shape": "viewport"
+      },
+      {
+        "path": "IVR Web app/image_original2.png",
+        "kind": "image",
+        "name": "image_original2.png",
+        "format": "png",
+        "width": 2880,
+        "height": 2048,
+        "shape": "viewport"
+      },
+      {
+        "path": "IVR Web app/image_original3.png",
+        "kind": "image",
+        "name": "image_original3.png",
+        "format": "png",
+        "width": 2880,
+        "height": 2048,
+        "shape": "viewport"
+      },
+      {
+        "path": "IVR Web app/image_original4.png",
+        "kind": "image",
+        "name": "image_original4.png",
+        "format": "png",
+        "width": 2880,
+        "height": 3776,
+        "shape": "full-page"
+      },
+      {
+        "path": "IVR Web app/image_original5.png",
+        "kind": "image",
+        "name": "image_original5.png",
+        "format": "png",
+        "width": 2880,
+        "height": 2048,
+        "shape": "viewport"
+      },
+      {
+        "path": "IVR Web app/image_original6.png",
+        "kind": "image",
+        "name": "image_original6.png",
+        "format": "png",
+        "width": 2800,
+        "height": 2400,
+        "shape": "full-page"
+      },
+      {
+        "path": "IVR Web app/image_original7.png",
+        "kind": "image",
+        "name": "image_original7.png",
+        "format": "png",
+        "width": 2880,
+        "height": 2248,
+        "shape": "viewport"
+      },
+      {
+        "path": "IVR Web app/image_original8.png",
+        "kind": "image",
+        "name": "image_original8.png",
+        "format": "png",
+        "width": 2880,
+        "height": 3252,
+        "shape": "full-page"
+      },
+      {
+        "path": "IVR Web app/image_original9.png",
+        "kind": "image",
+        "name": "image_original9.png",
+        "format": "png",
+        "width": 2880,
+        "height": 3252,
+        "shape": "full-page"
+      }
+    ],
+    "score": null
+  },
+  "direction": {
+    "style": "playful",
+    "all_styles": [
+      "playful"
+    ],
+    "industry": [
+      "ai",
+      "food-drink"
+    ],
+    "layout": [],
+    "mode": "light"
+  },
+  "tokens": {
+    "roles": {
+      "ground": "#FFFFFF",
+      "surface": "#F5F5F7",
+      "ink": "#111113",
+      "muted": "#6B7280",
+      "accent": "#5B5BF0",
+      "accent2": "#C08BF5"
+    },
+    "palette": [
+      "#FFFFFF",
+      "#F5F5F7",
+      "#5B5BF0",
+      "#111113",
+      "#6B7280"
+    ],
+    "fonts": [
+      "Sora",
+      "Manrope"
+    ],
+    "radius": "24px",
+    "shadow": "0 6px 0 rgba(0,0,0,.9)",
+    "section_padding_desktop": "120px",
+    "section_padding_mobile": "72px",
+    "density": "chunky",
+    "type_scale": {
+      "display": "clamp(2.5rem, 5vw, 4rem)",
+      "h1": "clamp(2rem, 4vw, 3.25rem)",
+      "h2": "clamp(1.5rem, 2.5vw, 2.25rem)",
+      "body": "16px",
+      "leading_display": "1.1"
+    }
+  },
+  "sections": [
+    "nav",
+    "hero",
+    "about",
+    "process",
+    "features",
+    "pricing",
+    "cta",
+    "footer"
+  ],
+  "motion": [
+    {
+      "technique": "reveal-on-scroll",
+      "tool": "IntersectionObserver + CSS",
+      "note": "fire once at ~20% viewport; never re-animate on scroll up"
+    }
+  ],
+  "image_prompts": [
+    {
+      "slot": "hero",
+      "aspect_ratio": "16:9",
+      "prompt": "Wide cinematic hero image for a ai, food-drink website. Receptra. playful art direction, palette restrained neutral palette, no text, no watermark, no UI chrome. Strong single focal point positioned off-centre with generous negative space on the left third for a headline overlay. Shallow depth of field, controlled contrast so white type stays readable over it."
+    },
+    {
+      "slot": "feature-texture",
+      "aspect_ratio": "1:1",
+      "prompt": "Abstract close-up texture evoking ai, food-drink. playful art direction, palette restrained neutral palette, no text, no watermark, no UI chrome. Macro detail, soft directional light, extremely shallow depth of field, reads as a background at low opacity rather than as a subject."
+    },
+    {
+      "slot": "section-support",
+      "aspect_ratio": "4:3",
+      "prompt": "Editorial supporting photograph for a ai, food-drink website section. Receptra. playful art direction, palette restrained neutral palette, no text, no watermark, no UI chrome. Documentary framing, natural light, one human gesture or one object in use, nothing staged or stock-like."
+    },
+    {
+      "slot": "og-card",
+      "aspect_ratio": "16:9",
+      "prompt": "Open Graph share card background for a ai, food-drink brand. playful art direction, palette restrained neutral palette, no text, no watermark, no UI chrome. Simple, high contrast, centre kept visually quiet so a logo and title can be composited on top."
+    }
+  ],
+  "constraints": [
+    "No purple-to-blue gradient on a white card unless the reference design actually uses one.",
+    "No emoji as icons. Use a real icon set or draw inline SVG.",
+    "Body text is never below 15px, and never pure #000 on pure #FFF.",
+    "Every section must differ from its neighbour in background, rhythm or column count - eleven identical centred slabs is the single clearest tell of a generated page.",
+    "Buttons need real hover, focus-visible and active states, not just a colour change.",
+    "Respect prefers-reduced-motion: hold transforms, keep opacity fades.",
+    "Images need explicit width/height or aspect-ratio so nothing shifts on load.",
+    "Ship real copy, not lorem ipsum, and not three-word headlines that say nothing."
+  ],
+  "source_description": "My role. UX/UI Designer\n\nProject description.\n\nThe startup product is an IVR telephony solution designed to help businesses improve their customer service and streamline their phone communication processes. The solution is based on interactive voice response (IVR) technology and provides customers with a self-service menu that guides them through their inquiries and requests.\n\nMy role in the project\n\u2705 Development of prototypes and user interface\n\u2705 Thinking through the user flow for interactive user interaction with the product\n\u2705 Interface animation\n\u2705 Branding\n\nSkills and deliverables\n\nUX & UI\nWeb Design\nUser Experience Design\nUser Interface Design\nAI App Development\n\n\nProject Description\n\nThe IVR telephony solution for businesses includes a user-friendly interface that allows easy customization of the interactive voice response menus to suit each client's specific needs. It provides detailed call analytics and reporting features to help businesses monitor and assess their call-handling efficiency. Additionally, the solution integrates seamlessly with existing customer relationship management (CRM) systems to ensure a consistent and unified customer experience across all touchpoints.\n\nSteps\n- Prototypes and user interface\n- Thinking through the user flow for interactive user interaction with the product\n- Interface animation\n- Branding\n\n\n\n\n\n\n\n\nPublished on Jun 26, 2024"
+}
