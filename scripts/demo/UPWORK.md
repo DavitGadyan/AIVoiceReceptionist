@@ -4,6 +4,12 @@ Files to upload from `scripts/demo/out/`: `showreel.mp4` first, then `voice-demo
 `activity.mp4`. Use the matching `.jpg` as each item's thumbnail. Upwork's portfolio player is 16:9, which
 these are. The profile *introduction video* is a separate field and needs a public YouTube link.
 
+**Project thumbnail:** `thumbnail-4x3.png` (2000×1500, the 4:3 ratio Upwork's portfolio cards use; 1000×750
+is their recommended minimum). The logo, headline, receptionist and chips all sit inside the inner 80%, so a
+10% band on every side can be cropped or hidden by the card's rounded corners without losing anything. Upload
+the PNG (Upwork re-compresses JPGs harder). `thumbnail-16x9.png` is the same composition for the video
+player and for anywhere else a 16:9 cover is needed.
+
 ---
 
 ## Project title (≤ 70 characters)

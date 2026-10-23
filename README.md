@@ -77,6 +77,11 @@ cd scripts/demo && PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1 npm install && npm run car
 Outputs land in `scripts/demo/out/` (`showreel.mp4`, `voice-demo.mp4`, `pdf-config.mp4`, `activity.mp4`
 and a `.jpg` cover each). `out/run.log` collects console errors seen while recording.
 
+The Upwork project thumbnail is rendered from the live landing page (3D receptionist, logo, headline),
+recomposed 4:3 with a 10% safe margin on every side; it works against the dev server too:
+`cd scripts/demo && DEMO_FRONTEND=http://localhost:3000 npm run thumbnail` → `out/thumbnail-4x3.png`
+(+ `.jpg`, + a 16:9 variant). Add `-- --guides` to draw the safe box for checking.
+
 Demo login: `demo@receptra.ai` / `demo1234` (plumbing). One demo tenant per industry:
 `aligned-clinic@`, `glow-medspa@`, `cut-and-co@`, `harbor-law@`, `keystone-homes@`, `canvas-marquees@receptra.ai`.
 
