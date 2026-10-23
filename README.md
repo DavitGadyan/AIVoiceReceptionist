@@ -51,6 +51,11 @@ cd backend && uv venv && uv pip install -e '.[dev]' && .venv/bin/uvicorn app.mai
 cd frontend && npm install && npm run dev  # http://localhost:3000
 ```
 
+Don't run `npm run build` while `npm run dev` is up: both write to `frontend/.next` and the dev server's
+manifests get corrupted (every page 500s with no styles). Either stop the dev server first, or build into
+a separate folder with `NEXT_DIST_DIR=.next-build npm run build`. If it already happened, stop the dev
+server, `rm -rf frontend/.next`, and start it again.
+
 Demo login: `demo@receptra.ai` / `demo1234` (plumbing). One demo tenant per industry:
 `aligned-clinic@`, `glow-medspa@`, `cut-and-co@`, `harbor-law@`, `keystone-homes@`, `canvas-marquees@receptra.ai`.
 

@@ -8,5 +8,5 @@ backend/.pytest_cache/
 scripts/.venv/
 scripts/out/
 frontend/node_modules/
-frontend/.next/
+frontend/.next*/
 frontend/verify/critique/

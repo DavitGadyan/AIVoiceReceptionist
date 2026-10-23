@@ -6,6 +6,10 @@ const nextConfig = {
   output: "standalone",
   images: { formats: ["image/avif", "image/webp"] },
   poweredByHeader: false,
+  // `next build` and `next dev` share .next by default, and a build run while the dev
+  // server is up corrupts its manifests (every page 500s with no CSS). Set
+  // NEXT_DIST_DIR=.next-build for builds you run alongside a dev server.
+  distDir: process.env.NEXT_DIST_DIR || ".next",
 };
 
 export default nextConfig;

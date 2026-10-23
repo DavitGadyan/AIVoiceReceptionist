@@ -6,6 +6,7 @@ const displayFont = DisplayFont({ subsets: ["latin"], variable: "--font-display-
 const bodyFont = BodyFont({ subsets: ["latin"], variable: "--font-body-loaded", display: "swap" });
 
 export const metadata: Metadata = {
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000"),
   title: { default: "Receptra — AI voice receptionist", template: "%s · Receptra" },
   description:
     "An AI receptionist that answers every call, books appointments, triages emergencies and texts you the summary. Set up for any business from a form or a PDF.",
