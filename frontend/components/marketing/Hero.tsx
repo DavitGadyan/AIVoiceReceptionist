@@ -4,7 +4,7 @@ import { Globe, Mic, MessageCircle, Phone, Square } from "lucide-react";
 import { m } from "motion/react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
-import { memo, useCallback, useState } from "react";
+import { memo, useCallback, useEffect, useState } from "react";
 import { Logo } from "@/components/ui/Logo";
 import { WaveRings } from "@/components/head3d/WaveRings";
 import { DUR, EASE_OUT, fadeRise, group, popIn, stagger } from "@/lib/motion";
@@ -29,6 +29,12 @@ export function Hero() {
   const live = voice.status === "live" || voice.status === "connecting";
   const [headReady, setHeadReady] = useState(false);
   const onHeadReady = useCallback(() => setHeadReady(true), []);
+  // Safety net: never leave the hero empty if the ready signal is lost (blocked WebGL).
+  // Normal loads reveal earlier via onReady; the canvas is transparent until the portrait draws.
+  useEffect(() => {
+    const t = window.setTimeout(() => setHeadReady(true), 8000);
+    return () => window.clearTimeout(t);
+  }, []);
 
   return (
     <section className="relative isolate flex h-screen min-h-[680px] flex-col overflow-hidden text-white">
@@ -58,8 +64,9 @@ export function Hero() {
       {/* The head overlaps the second headline line, as in the reference. It fades in once its textures resolve. */}
       <m.div
         className="relative z-0 mx-auto -mt-[7svh] min-h-0 w-full max-w-[900px] flex-1 [mask-image:linear-gradient(to_bottom,black_62%,transparent_100%)]"
-        initial={{ opacity: 0, transform: "scale(0.96)" }}
-        animate={headReady ? { opacity: 1, transform: "scale(1)" } : undefined}
+        variants={{ hidden: { opacity: 0, transform: "scale(0.96)" }, shown: { opacity: 1, transform: "scale(1)" } }}
+        initial="hidden"
+        animate={headReady ? "shown" : "hidden"}
         transition={{ duration: DUR.slow, ease: EASE_OUT }}
       >
         <HeadScene level={voice.level} onReady={onHeadReady} />

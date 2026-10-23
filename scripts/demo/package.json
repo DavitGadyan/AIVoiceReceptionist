@@ -1,0 +1,14 @@
+{
+  "name": "receptra-demo-videos",
+  "private": true,
+  "type": "module",
+  "description": "Records Receptra product demo videos with Playwright and assembles them with ffmpeg.",
+  "scripts": {
+    "cards": "node cards.mjs",
+    "record": "node record.mjs all",
+    "post": "node post.mjs all"
+  },
+  "dependencies": {
+    "playwright": "1.58.2"
+  }
+}

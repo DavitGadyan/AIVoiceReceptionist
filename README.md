@@ -56,6 +56,27 @@ manifests get corrupted (every page 500s with no styles). Either stop the dev se
 a separate folder with `NEXT_DIST_DIR=.next-build npm run build`. If it already happened, stop the dev
 server, `rm -rf frontend/.next`, and start it again.
 
+## Demo videos
+
+`scripts/demo/` records the product with Playwright (cursor overlay, captions, scripted flows) and
+assembles 1080p MP4s with ffmpeg — a ~80 s showreel plus three ~25 s clips, with cover frames and
+ready-to-paste portfolio copy in `scripts/demo/UPWORK.md`. It records against a production build on
+port 3100 and a throwaway demo database, so the dev servers stay untouched.
+
+```bash
+# 1. recording backend (stop the dev uvicorn on :8000 first)
+cd backend && rm -f receptra-demo.db && CORS_ORIGINS=http://localhost:3000,http://localhost:3100 \
+  DATABASE_URL=sqlite+aiosqlite:///./receptra-demo.db .venv/bin/uvicorn app.main:app --port 8000
+# 2. production frontend
+cd frontend && NEXT_DIST_DIR=.next-build npm run build && NEXT_DIST_DIR=.next-build npx next start -p 3100
+# 3. record + assemble (a Chrome window opens for a few minutes; don't touch it)
+backend/.venv/bin/python scripts/demo/make_pdf.py
+cd scripts/demo && PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1 npm install && npm run cards && npm run record && npm run post
+```
+
+Outputs land in `scripts/demo/out/` (`showreel.mp4`, `voice-demo.mp4`, `pdf-config.mp4`, `activity.mp4`
+and a `.jpg` cover each). `out/run.log` collects console errors seen while recording.
+
 Demo login: `demo@receptra.ai` / `demo1234` (plumbing). One demo tenant per industry:
 `aligned-clinic@`, `glow-medspa@`, `cut-and-co@`, `harbor-law@`, `keystone-homes@`, `canvas-marquees@receptra.ai`.
 
